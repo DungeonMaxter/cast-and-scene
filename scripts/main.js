@@ -11,6 +11,8 @@ const RELEASE_NOTICE_DISABLED_SETTING = "releaseNoticeDisabled";
 const TUTORIAL_COMPLETED_SETTING = "tutorialCompleted";
 const FIRST_RUN_WELCOME_SEEN_SETTING = "firstRunWelcomeSeen";
 const FIRST_RUN_BOOTSTRAP_SETTING = "firstRunBootstrap";
+const COMMUNITY_CARD_SEEN_SETTING = "communityCardSeen";
+const PATREON_URL = "https://www.patreon.com/cw/DungeonMaxter";
 const DATA_SCHEMA_VERSION_SETTING = "dataSchemaVersion";
 const LEGACY_NAMESPACE_MIGRATED_SETTING = "legacyNamespaceMigrated";
 const DATA_SCHEMA_VERSION = 1;
@@ -2081,7 +2083,7 @@ class VisualNovelDirector {
 
   static async getAssetMetrics(path) {
     const src = String(path || "").trim();
-    if (!src) return { src, width: 0, height: 0, decodedBytes: 0, fileBytes: 0, format: "—", error: true };
+    if (!src) return { src, width: 0, height: 0, decodedBytes: 0, fileBytes: 0, format: "-", error: true };
     if (this.assetMetricsCache.has(src)) return this.assetMetricsCache.get(src);
 
     const promise = (async () => {
@@ -2097,7 +2099,7 @@ class VisualNovelDirector {
         fileBytes = Number(response.headers.get("content-length")) || 0;
       } catch (_error) { fileBytes = 0; }
       const clean = src.split(/[?#]/)[0];
-      const extension = clean.includes(".") ? clean.split(".").pop().toUpperCase() : "—";
+      const extension = clean.includes(".") ? clean.split(".").pop().toUpperCase() : "-";
       return {
         src,
         width: dimensions.width,
@@ -2897,6 +2899,38 @@ class VisualNovelOnboarding {
     };
   }
 
+  static async showCommunityCard() {
+    if (!game.user?.isGM) return false;
+    if (game.settings.get(MODULE_ID, COMMUNITY_CARD_SEEN_SETTING)) return false;
+
+    const content = `
+      <div class="fvn-community-card">
+        <img class="fvn-community-card__logo" src="modules/${MODULE_ID}/assets/branding/dungeon-maxter-logo.png" alt="Dungeon Maxter" />
+        <div class="fvn-community-card__body">
+          <h3>Cast & Scene</h3>
+          <p>Cast & Scene is a system-agnostic module designed for Game Masters who want to enrich Theatre of the Mind by bringing the characters of their adventures onto the scene.</p>
+          <a class="fvn-community-card__patreon" href="${PATREON_URL}" target="_blank" rel="noopener noreferrer">
+            <i class="fa-brands fa-patreon"></i>
+            <span>Join Dungeon Maxter on Patreon</span>
+          </a>
+        </div>
+      </div>`;
+
+    try {
+      const message = await ChatMessage.create({
+        content,
+        whisper: [],
+        speaker: ChatMessage.getSpeaker({ alias: "Cast & Scene" })
+      });
+      if (!message) return false;
+      await game.settings.set(MODULE_ID, COMMUNITY_CARD_SEEN_SETTING, true);
+      return true;
+    } catch (error) {
+      console.error(`${MODULE_ID} | Community card failed to post`, error);
+      return false;
+    }
+  }
+
   static async showReleaseNotes({ force = false } = {}) {
     if (!game.user.isGM) return;
     const disabled = game.settings.get(MODULE_ID, RELEASE_NOTICE_DISABLED_SETTING);
@@ -2910,7 +2944,7 @@ class VisualNovelOnboarding {
     const notes = this.releaseNotes();
     const content = `
       <div class="fvn-release-notes">
-        <header><i class="fa-solid fa-masks-theater"></i><div><h2>${game.i18n.localize("FVN.WelcomeTitle")}</h2><p>${game.i18n.format("FVN.WelcomeVersion", { version: CURRENT_VERSION })}</p></div></header>
+        <header><img class="fvn-release-notes__logo" src="modules/${MODULE_ID}/assets/branding/dungeon-maxter-logo.png" alt="Dungeon Maxter" /><div><h2>${game.i18n.localize("FVN.WelcomeTitle")}</h2><p>${game.i18n.format("FVN.WelcomeVersion", { version: CURRENT_VERSION })}</p></div></header>
         <section><h3>${game.i18n.localize("FVN.WhatsNew")}</h3><ul>${notes.features.map((item) => `<li><i class="fa-solid fa-check"></i><span>${item}</span></li>`).join("")}</ul></section>
         <section><h3>${game.i18n.localize("FVN.Fixed")}</h3><ul>${notes.fixes.map((item) => `<li><i class="fa-solid fa-wrench"></i><span>${item}</span></li>`).join("")}</ul></section>
         <label class="fvn-release-notes__choice"><input type="checkbox" name="disableReleaseNotes" /> <span>${game.i18n.localize("FVN.DoNotShowReleaseNotes")}</span></label>
@@ -2958,6 +2992,8 @@ class VisualNovelOnboarding {
       ],
       rejectClose: false
     });
+
+    await this.showCommunityCard();
 
     if (!tutorialLaunched && (tutorialRequested || confirmed === "tutorial")) {
       await new Promise((resolve) => window.setTimeout(resolve, 180));
@@ -3686,6 +3722,7 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, TUTORIAL_COMPLETED_SETTING, { name: "FVN.TutorialCompletedSetting", scope: "client", config: false, type: Boolean, default: false });
   game.settings.register(MODULE_ID, FIRST_RUN_WELCOME_SEEN_SETTING, { name: "First-run Welcome seen", scope: "world", config: false, type: Boolean, default: false });
   game.settings.register(MODULE_ID, FIRST_RUN_BOOTSTRAP_SETTING, { name: "First-run onboarding bootstrap", scope: "world", config: false, type: String, default: "" });
+  game.settings.register(MODULE_ID, COMMUNITY_CARD_SEEN_SETTING, { name: "Community card seen", scope: "world", config: false, type: Boolean, default: false });
   game.settings.register(MODULE_ID, DATA_SCHEMA_VERSION_SETTING, { name: "FVN.DataSchemaVersionSetting", scope: "world", config: false, type: Number, default: 0 });
   game.settings.register(MODULE_ID, LEGACY_NAMESPACE_MIGRATED_SETTING, { name: "Legacy namespace migrated", scope: "world", config: false, type: Boolean, default: false });
 

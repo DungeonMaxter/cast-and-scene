@@ -1,7 +1,7 @@
 {
   "id": "cast-and-scene",
   "title": "Cast & Scene",
-  "description": "Cast & Scene is a system-agnostic cinematic Theatre of the Mind toolkit for Foundry VTT, with reusable casts, Scene Presets, Quick Access, Camera Focus, background effects, silhouette reveals, performance diagnostics, and guided onboarding.",
+  "description": "Cast & Scene is a system-agnostic module designed for Game Masters who want to enrich Theatre of the Mind by bringing the characters of their adventures onto the scene. It gives Game Masters the tools to make those scenes as cinematic as possible. Camera Focus, background effects, silhouette reveals and more can help create even greater emotional intensity during your games.",
   "version": "1.0.0",
   "authors": [
     {

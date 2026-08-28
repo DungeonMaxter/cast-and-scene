@@ -4,7 +4,7 @@
 **Author:** Dungeon Maxter  
 **Compatibility:** Foundry Virtual Tabletop v14  
 **System:** System agnostic  
-**License:** Proprietary — free to use; see `LICENSE`
+**License:** Proprietary - free to use; see `LICENSE`
 
 **Build your cast. Set the scene.**
 

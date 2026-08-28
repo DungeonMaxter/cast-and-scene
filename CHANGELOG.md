@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 — Initial Public Release
+## 1.0.0 - Initial Public Release
 
 ### Core
 - Character Pool with reusable portraits and image variants.
