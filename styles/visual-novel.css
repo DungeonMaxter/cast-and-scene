@@ -1953,26 +1953,12 @@
 }
 
 
-/* Cast & Scene branding and one-time community chat card */
-.fvn-release-notes__logo {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-  flex: 0 0 auto;
-}
-
+/* Cast & Scene one-time community chat card */
 .fvn-community-card {
   display: flex;
   gap: 14px;
   align-items: center;
   padding: 12px;
-}
-
-.fvn-community-card__logo {
-  width: 84px;
-  height: 84px;
-  object-fit: contain;
-  flex: 0 0 auto;
 }
 
 .fvn-community-card__body {
@@ -1998,10 +1984,5 @@
 @media (max-width: 520px) {
   .fvn-community-card {
     align-items: flex-start;
-  }
-
-  .fvn-community-card__logo {
-    width: 64px;
-    height: 64px;
   }
 }
