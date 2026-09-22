@@ -2905,7 +2905,6 @@ class VisualNovelOnboarding {
 
     const content = `
       <div class="fvn-community-card">
-        <img class="fvn-community-card__logo" src="modules/${MODULE_ID}/assets/branding/dungeon-maxter-logo.png" alt="Dungeon Maxter" />
         <div class="fvn-community-card__body">
           <h3>Cast & Scene</h3>
           <p>Cast & Scene is a system-agnostic module designed for Game Masters who want to enrich Theatre of the Mind by bringing the characters of their adventures onto the scene.</p>
@@ -2944,7 +2943,7 @@ class VisualNovelOnboarding {
     const notes = this.releaseNotes();
     const content = `
       <div class="fvn-release-notes">
-        <header><img class="fvn-release-notes__logo" src="modules/${MODULE_ID}/assets/branding/dungeon-maxter-logo.png" alt="Dungeon Maxter" /><div><h2>${game.i18n.localize("FVN.WelcomeTitle")}</h2><p>${game.i18n.format("FVN.WelcomeVersion", { version: CURRENT_VERSION })}</p></div></header>
+        <header><div><h2>${game.i18n.localize("FVN.WelcomeTitle")}</h2><p>${game.i18n.format("FVN.WelcomeVersion", { version: CURRENT_VERSION })}</p></div></header>
         <section><h3>${game.i18n.localize("FVN.WhatsNew")}</h3><ul>${notes.features.map((item) => `<li><i class="fa-solid fa-check"></i><span>${item}</span></li>`).join("")}</ul></section>
         <section><h3>${game.i18n.localize("FVN.Fixed")}</h3><ul>${notes.fixes.map((item) => `<li><i class="fa-solid fa-wrench"></i><span>${item}</span></li>`).join("")}</ul></section>
         <label class="fvn-release-notes__choice"><input type="checkbox" name="disableReleaseNotes" /> <span>${game.i18n.localize("FVN.DoNotShowReleaseNotes")}</span></label>
