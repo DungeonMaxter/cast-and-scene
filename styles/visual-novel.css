@@ -3603,3 +3603,22 @@ body.theme-light .fvn-scene-palette__portrait-tools .fvn-scene-palette__focus.is
 .fvn-scene-palette__controls [data-action="reset-palette-camera"][hidden] {
   display: none !important;
 }
+
+
+/* v1.1.0 - readable Reset Camera in Foundry light theme */
+body.theme-light .fvn-scene-palette__reset-camera {
+  border-color: rgba(138, 104, 42, .42);
+  background: rgba(138, 104, 42, .10);
+  color: #4a3922;
+}
+
+body.theme-light .fvn-scene-palette__reset-camera:hover:not(:disabled) {
+  border-color: rgba(138, 104, 42, .66);
+  background: rgba(138, 104, 42, .17);
+  color: #2f2417;
+}
+
+body.theme-light .fvn-scene-palette__reset-camera:disabled {
+  opacity: .48;
+  color: #766c60;
+}
