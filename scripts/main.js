@@ -1318,7 +1318,10 @@ class VisualNovelDirector {
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") this.closeContextMenu();
     });
-    window.addEventListener("resize", () => this.closeContextMenu());
+    window.addEventListener("resize", () => {
+      this.closeContextMenu();
+      this.fitPanelToViewport();
+    });
 
     this.panel.querySelector("[data-field='search']").addEventListener("input", () => this.renderCharacters());
     this.panel.querySelector("[data-field='pool-search']").addEventListener("input", () => this.renderPoolPicker());
@@ -1519,6 +1522,34 @@ class VisualNovelDirector {
     this.toggleMinimized(minimized);
   }
 
+  static getPanelBounds() {
+    const margin = 8;
+    const availableWidth = Math.max(1, window.innerWidth - (margin * 2));
+    const availableHeight = Math.max(1, window.innerHeight - (margin * 2));
+    return {
+      margin,
+      minWidth: Math.min(560, availableWidth),
+      minHeight: Math.min(360, availableHeight),
+      maxWidth: availableWidth,
+      maxHeight: availableHeight
+    };
+  }
+
+  static fitPanelToViewport() {
+    if (!this.panel) return;
+    const bounds = this.getPanelBounds();
+    const rect = this.panel.getBoundingClientRect();
+    const width = Math.min(bounds.maxWidth, Math.max(bounds.minWidth, rect.width));
+    const height = Math.min(bounds.maxHeight, Math.max(bounds.minHeight, rect.height));
+    const left = Math.min(Math.max(bounds.margin, rect.left), Math.max(bounds.margin, window.innerWidth - width - bounds.margin));
+    const top = Math.min(Math.max(bounds.margin, rect.top), Math.max(bounds.margin, window.innerHeight - height - bounds.margin));
+    this.panel.style.width = `${width}px`;
+    this.panel.style.height = `${height}px`;
+    this.panel.style.left = `${left}px`;
+    this.panel.style.top = `${top}px`;
+    this.panel.style.right = "auto";
+  }
+
   static startResize(event) {
     if (event.button !== 0) return;
     const rect = this.panel.getBoundingClientRect();
@@ -1550,10 +1581,11 @@ class VisualNovelDirector {
   static resizePanel(event) {
     if (!this.resizeState || event.pointerId !== this.resizeState.pointerId) return;
     const rect = this.panel.getBoundingClientRect();
-    const maxWidth = Math.max(360, window.innerWidth - rect.left - 8);
-    const maxHeight = Math.max(260, window.innerHeight - rect.top - 8);
-    const width = Math.min(maxWidth, Math.max(360, this.resizeState.startWidth + event.clientX - this.resizeState.startX));
-    const height = Math.min(maxHeight, Math.max(260, this.resizeState.startHeight + event.clientY - this.resizeState.startY));
+    const bounds = this.getPanelBounds();
+    const maxWidth = Math.max(bounds.minWidth, window.innerWidth - rect.left - bounds.margin);
+    const maxHeight = Math.max(bounds.minHeight, window.innerHeight - rect.top - bounds.margin);
+    const width = Math.min(maxWidth, Math.max(bounds.minWidth, this.resizeState.startWidth + event.clientX - this.resizeState.startX));
+    const height = Math.min(maxHeight, Math.max(bounds.minHeight, this.resizeState.startHeight + event.clientY - this.resizeState.startY));
     this.panel.style.width = `${width}px`;
     this.panel.style.height = `${height}px`;
   }
@@ -1571,8 +1603,9 @@ class VisualNovelDirector {
     try { saved = JSON.parse(localStorage.getItem(`${MODULE_ID}.directorSize`) || "null"); }
     catch (_error) { saved = null; }
     if (!saved || !Number.isFinite(saved.width) || !Number.isFinite(saved.height)) return;
-    this.panel.style.width = `${Math.min(Math.max(360, saved.width), window.innerWidth - 16)}px`;
-    this.panel.style.height = `${Math.min(Math.max(260, saved.height), window.innerHeight - 16)}px`;
+    const bounds = this.getPanelBounds();
+    this.panel.style.width = `${Math.min(bounds.maxWidth, Math.max(bounds.minWidth, saved.width))}px`;
+    this.panel.style.height = `${Math.min(bounds.maxHeight, Math.max(bounds.minHeight, saved.height))}px`;
   }
 
   static startDrag(event) {
@@ -2600,8 +2633,9 @@ class VisualNovelDirector {
       rectHeight: rect.height
     };
     this.panel.classList.add("fvn-director--editor-mode");
-    const compactWidth = Math.min(720, Math.max(520, window.innerWidth - 32));
-    const compactHeight = Math.min(760, Math.max(420, window.innerHeight - 32));
+    const bounds = this.getPanelBounds();
+    const compactWidth = Math.min(720, bounds.maxWidth);
+    const compactHeight = Math.min(760, bounds.maxHeight);
     this.panel.style.width = `${compactWidth}px`;
     this.panel.style.height = `${compactHeight}px`;
     const current = this.panel.getBoundingClientRect();
