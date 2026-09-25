@@ -46,6 +46,7 @@ const DEFAULT_STAGE_STATE = {
   backgroundEffect: "dim",
   backgroundIntensity: "medium",
   namesVisible: true,
+  spotlightCharacterId: null,
   camera: { enabled: false, x: 0, y: 0, zoom: 1, targetPortraitId: null, focusX: 0.5, focusY: 0.28, framing: 1.65 }
 };
 
@@ -93,14 +94,6 @@ class VisualNovelStage {
     stage.className = "fvn-stage";
     stage.setAttribute("aria-label", "Cast & Scene Stage");
     stage.innerHTML = `
-      <svg class="fvn-stage__effects" width="0" height="0" aria-hidden="true" focusable="false">
-        <defs>
-          <filter id="fvn-flame-warp" x="-15%" y="-15%" width="130%" height="135%" color-interpolation-filters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.018 0.065" numOctaves="2" seed="11" result="noise"/>
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="18" xChannelSelector="R" yChannelSelector="G"/>
-          </filter>
-        </defs>
-      </svg>
       <div class="fvn-stage__dimmer" aria-hidden="true"></div>
       <div class="fvn-stage__preview-grid" hidden aria-hidden="true">
         <span class="fvn-stage__preview-label"></span>
@@ -261,6 +254,7 @@ class VisualNovelStage {
         backgroundEffect: ["none", "dim", "blur", "focus"].includes(raw.backgroundEffect) ? raw.backgroundEffect : "dim",
         backgroundIntensity: ["small", "medium", "large"].includes(raw.backgroundIntensity) ? raw.backgroundIntensity : (raw.dimFeather === "large" ? "large" : "medium"),
         namesVisible: raw.namesVisible !== false,
+        spotlightCharacterId: raw.spotlightCharacterId ? String(raw.spotlightCharacterId) : null,
         camera: this.normalizeCamera(raw.camera)
       };
     }
@@ -276,6 +270,7 @@ class VisualNovelStage {
         backgroundEffect: DEFAULT_STAGE_STATE.backgroundEffect,
         backgroundIntensity: DEFAULT_STAGE_STATE.backgroundIntensity,
         namesVisible: DEFAULT_STAGE_STATE.namesVisible,
+        spotlightCharacterId: null,
         camera: foundry.utils.deepClone(DEFAULT_STAGE_STATE.camera)
       };
     }
@@ -612,10 +607,21 @@ class VisualNovelStage {
       wrap._fvnRemovalTimeout = window.setTimeout(() => wrap.remove(), 280);
     }
 
+    const spotlightId = state.spotlightCharacterId ? String(state.spotlightCharacterId) : null;
+    const spotlightVisible = spotlightId
+      ? state.portraits.some((portrait) => String(portrait.characterId ?? portrait.id) === spotlightId)
+      : false;
+
+    stage.classList.toggle("fvn-stage--spotlight-active", spotlightVisible);
+
     const total = state.portraits.length;
     state.portraits.forEach((portrait, index) => {
       const rendered = { ...portrait, layer: total - index };
       const wrap = this.renderPortrait(rendered);
+      const isSpotlight = spotlightVisible && String(portrait.characterId ?? portrait.id) === spotlightId;
+      wrap.classList.toggle("fvn-stage__portrait-wrap--spotlight", isSpotlight);
+      wrap.classList.toggle("fvn-stage__portrait-wrap--spotlight-dimmed", spotlightVisible && !isSpotlight);
+      if (isSpotlight) wrap.style.zIndex = String(total + 100);
       this.renderNameplate(rendered, { visible: state.namesVisible });
       if (camera.enabled && String(camera.targetPortraitId) === String(portrait.id)) {
         const image = wrap?.querySelector('.fvn-stage__portrait');
@@ -973,6 +979,11 @@ class VisualNovelScenePalette {
         if (id) await VisualNovelAPI.toggleSilhouette(id);
         this.render();
       }
+      if (action === "toggle-palette-spotlight") {
+        const id = event.target.closest("[data-character-id]")?.dataset.characterId;
+        if (id) await VisualNovelAPI.toggleSpotlight(id);
+        this.render();
+      }
     });
     this.root.addEventListener("contextmenu", (event) => this.openContextMenu(event));
     return this.root;
@@ -1153,6 +1164,7 @@ class VisualNovelScenePalette {
         </button>
         <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
         <button type="button" data-action="toggle-palette-silhouette" class="fvn-scene-palette__silhouette ${Boolean(character.silhouette) ? "is-active" : ""}" title="${game.i18n.localize("FVN.Silhouette")}"><i class="fa-solid fa-user-secret"></i></button>
+        <button type="button" data-action="toggle-palette-spotlight" class="fvn-scene-palette__spotlight ${state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "FVN.RestoreSpotlight" : "FVN.Spotlight")}" ${active ? "" : "disabled"}><i class="fa-solid fa-lightbulb"></i></button>
         ${VisualNovelDirector.variantOptions(character)}
       </div>`;
     }).join("") : `<div class="fvn-scene-palette__empty">${game.i18n.localize("FVN.EmptyLibrary")}</div>`;
@@ -3491,6 +3503,7 @@ class VisualNovelAPI {
     const id = typeof characterOrId === "string" ? characterOrId : (characterOrId.characterId ?? characterOrId.id);
     const state = this.getState();
     state.portraits = state.portraits.filter((entry) => String(entry.characterId ?? entry.id) !== String(id));
+    if (String(state.spotlightCharacterId ?? "") === String(id)) state.spotlightCharacterId = null;
     await this.commitState(state);
   }
 
@@ -3596,6 +3609,33 @@ class VisualNovelAPI {
 
     if (portrait) await this.commitState(state);
     else VisualNovelScenePalette.render();
+  }
+
+  static async toggleSpotlight(characterId, force = null) {
+    if (!game.user.isGM || !characterId) return;
+    const state = this.getState();
+    const id = String(characterId);
+    const portrait = state.portraits.find((entry) => String(entry.characterId ?? entry.id) === id);
+    if (!portrait) {
+      ui.notifications.warn(game.i18n.localize("FVN.SpotlightRequiresVisible"));
+      return;
+    }
+
+    const current = state.spotlightCharacterId ? String(state.spotlightCharacterId) : null;
+    const next = force === false || (force === null && current === id)
+      ? null
+      : id;
+
+    state.spotlightCharacterId = next;
+    await this.commitState(state);
+  }
+
+  static async resetSpotlight() {
+    if (!game.user.isGM) return;
+    const state = this.getState();
+    if (!state.spotlightCharacterId) return;
+    state.spotlightCharacterId = null;
+    await this.commitState(state);
   }
 
   static async resetCamera() {
