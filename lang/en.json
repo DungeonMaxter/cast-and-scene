@@ -214,7 +214,10 @@
     "TransitionFlip": "Flip",
     "TransitionBlur": "Blur",
     "TransitionFlash": "Flash",
-    "TransitionDissolve": "Dissolve"
+    "TransitionDissolve": "Dissolve",
+    "Spotlight": "Spotlight",
+    "RestoreSpotlight": "Remove Spotlight",
+    "SpotlightRequiresVisible": "Spotlight requires the character to be visible."
   },
   "FVN.TutorialStartFailed": "The tutorial could not start. Close and reopen Cast & Scene, then try again.",
   "FVN.QuickAccess": "Quick Access",
