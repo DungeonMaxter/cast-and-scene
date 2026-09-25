@@ -212,9 +212,9 @@
     "VariantTransition": "Variant transition",
     "TransitionNone": "Instant",
     "TransitionFlip": "Flip",
-    "TransitionFlame": "Flame Warp",
     "TransitionBlur": "Blur",
-    "TransitionFlash": "Flash"
+    "TransitionFlash": "Flash",
+    "TransitionDissolve": "Dissolve"
   },
   "FVN.TutorialStartFailed": "The tutorial could not start. Close and reopen Cast & Scene, then try again.",
   "FVN.QuickAccess": "Quick Access",
