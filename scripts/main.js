@@ -2568,6 +2568,16 @@ class VisualNovelDirector {
       </div>
       <button type="button" data-action="delete-variant" class="fvn-danger-icon" title="${game.i18n.localize("FVN.Delete")}"><i class="fa-solid fa-trash"></i></button>`;
     list.appendChild(row);
+
+    // When the user adds a new variant interactively, keep the newest row in view
+    // and place the cursor in its name field. Existing variants loaded into the
+    // editor should not steal scroll position or focus.
+    if (!variant.id && !variant.name && !variant.image) {
+      requestAnimationFrame(() => {
+        row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        row.querySelector("[data-variant-field='name']")?.focus({ preventScroll: true });
+      });
+    }
   }
 
   static browseVariantImage(row) {
