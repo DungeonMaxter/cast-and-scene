@@ -3288,3 +3288,54 @@ body.theme-light .fvn-transition-select select {
     column-gap: 6px;
   }
 }
+
+
+/* v1.1.0 - give Scene Preset transition controls real breathing room */
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode)
+.fvn-character:has(.fvn-preset-variant-controls) {
+  grid-template-columns: 18px 12px 64px minmax(90px, 1fr) minmax(270px, 330px) auto;
+}
+
+.fvn-preset-variant-controls {
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr);
+  column-gap: 16px;
+  margin-right: 12px;
+}
+
+.fvn-preset-variant-controls .fvn-transition-select {
+  gap: 9px;
+  padding-left: 6px;
+}
+
+.fvn-preset-variant-controls .fvn-transition-select i {
+  width: 18px;
+  text-align: center;
+}
+
+@container (max-width: 760px) {
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode)
+  .fvn-character:has(.fvn-preset-variant-controls) {
+    grid-template-columns: 18px 12px 58px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "drag perf thumb info info"
+      "drag perf thumb variant actions";
+  }
+
+  .fvn-preset-variant-controls {
+    grid-template-columns: minmax(105px, 1fr) minmax(105px, 1fr);
+    column-gap: 12px;
+    margin-right: 8px;
+  }
+}
+
+@container (max-width: 560px) {
+  .fvn-preset-variant-controls {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 7px;
+    margin-right: 0;
+  }
+
+  .fvn-preset-variant-controls .fvn-transition-select {
+    padding-left: 0;
+  }
+}
