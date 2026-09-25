@@ -2111,3 +2111,35 @@
     max-height: clamp(120px, 22vh, 190px);
   }
 }
+
+
+/* v1.1.0 - fixed editor action bar */
+.fvn-director--editor-mode .fvn-director__content {
+  height: 100%;
+  overflow: hidden;
+}
+
+.fvn-director--editor-mode .fvn-editor {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fvn-editor__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+.fvn-director--editor-mode .fvn-editor__actions {
+  position: static;
+  flex: 0 0 auto;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(255,255,255,.10);
+  background: transparent;
+  backdrop-filter: none;
+}
