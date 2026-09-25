@@ -2215,3 +2215,112 @@
   align-content: start;
   grid-auto-rows: max-content;
 }
+
+
+/* v1.1.0 - compact responsive Scene Preset character cards */
+.fvn-director__content {
+  container-type: inline-size;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character {
+  grid-template-columns: 18px 12px 64px minmax(90px, 1fr) minmax(118px, 160px) auto;
+  grid-template-areas: "drag perf thumb info variant actions";
+  gap: 8px;
+  min-height: 76px;
+  padding: 6px 8px;
+  align-items: center;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__drag-handle {
+  grid-area: drag;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character > .fvn-performance-dot {
+  grid-area: perf;
+  justify-self: center;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__thumb {
+  grid-area: thumb;
+  width: 64px;
+  height: 64px;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__thumb .fvn-checkerboard {
+  width: 64px;
+  height: 64px;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__info {
+  grid-area: info;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character .fvn-variant-select {
+  grid-area: variant;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: none;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character .fvn-variant-select i {
+  display: none;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character .fvn-variant-select select {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__actions {
+  grid-area: actions;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+/* Reflow according to the actual Director content width, not the monitor width. */
+@container (max-width: 650px) {
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character {
+    grid-template-columns: 18px 12px 58px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "drag perf thumb info info"
+      "drag perf thumb variant actions";
+    row-gap: 4px;
+    min-height: 76px;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__thumb,
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__thumb .fvn-checkerboard {
+    width: 58px;
+    height: 58px;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character .fvn-variant-select {
+    max-width: 190px;
+  }
+}
+
+@container (max-width: 470px) {
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character {
+    grid-template-columns: 16px 10px 52px minmax(0, 1fr);
+    grid-template-areas:
+      "drag perf thumb info"
+      "drag perf thumb variant"
+      "drag perf thumb actions";
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__thumb,
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__thumb .fvn-checkerboard {
+    width: 52px;
+    height: 52px;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character .fvn-variant-select {
+    max-width: none;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-character__actions {
+    justify-content: flex-start;
+  }
+}
