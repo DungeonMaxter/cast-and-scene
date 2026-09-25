@@ -93,6 +93,14 @@ class VisualNovelStage {
     stage.className = "fvn-stage";
     stage.setAttribute("aria-label", "Cast & Scene Stage");
     stage.innerHTML = `
+      <svg class="fvn-stage__effects" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          <filter id="fvn-flame-warp" x="-15%" y="-15%" width="130%" height="135%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.018 0.065" numOctaves="2" seed="11" result="noise"/>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+          </filter>
+        </defs>
+      </svg>
       <div class="fvn-stage__dimmer" aria-hidden="true"></div>
       <div class="fvn-stage__preview-grid" hidden aria-hidden="true">
         <span class="fvn-stage__preview-label"></span>
@@ -387,6 +395,7 @@ class VisualNovelStage {
       wrap.classList.remove("fvn-variant-transition--flash");
       portrait.style.removeProperty("filter");
       portrait.style.removeProperty("opacity");
+      portrait.style.removeProperty("clip-path");
       portrait.style.transform = baseTransform;
       portrait.style.removeProperty("transform-origin");
       wrap._fvnVariantTransition = null;
@@ -419,45 +428,70 @@ class VisualNovelStage {
 
     if (transition === "blur") {
       animate(portrait,
-        [{ opacity: 1, filter: "blur(0px)" }, { opacity: .18, filter: "blur(8px)" }],
-        { duration: 180, easing: "ease-in", fill: "forwards" });
+        [{ opacity: 1, filter: "blur(0px)" }, { opacity: .18, filter: "blur(9px)" }],
+        { duration: 360, easing: "ease-in", fill: "forwards" });
       later(() => {
         swap();
         animate(portrait,
-          [{ opacity: .18, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)" }],
-          { duration: 260, easing: "ease-out", fill: "forwards" });
-      }, 180);
-      later(cleanup, 460);
+          [{ opacity: .18, filter: "blur(9px)" }, { opacity: 1, filter: "blur(0px)" }],
+          { duration: 520, easing: "ease-out", fill: "forwards" });
+      }, 360);
+      later(cleanup, 900);
       return;
     }
 
     if (transition === "flash") {
-      wrap.classList.add("fvn-variant-transition--flash");
       animate(portrait,
-        [{ filter: "brightness(1)" }, { filter: "brightness(2.25)" }],
-        { duration: 115, easing: "ease-in", fill: "forwards" });
-      later(swap, 105);
+        [
+          { filter: "brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))" },
+          { filter: "brightness(2.7) drop-shadow(0 0 12px rgba(255,255,255,.95))" }
+        ],
+        { duration: 125, easing: "ease-in", fill: "forwards" });
+      later(swap, 115);
       later(() => animate(portrait,
-        [{ filter: "brightness(2.25)" }, { filter: "brightness(1)" }],
-        { duration: 190, easing: "ease-out", fill: "forwards" }), 115);
-      later(cleanup, 325);
+        [
+          { filter: "brightness(2.7) drop-shadow(0 0 12px rgba(255,255,255,.95))" },
+          { filter: "brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))" }
+        ],
+        { duration: 215, easing: "ease-out", fill: "forwards" }), 125);
+      later(cleanup, 355);
       return;
     }
 
     if (transition === "flame") {
       portrait.style.transformOrigin = "50% 100%";
       animate(portrait, [
-        { opacity: 1, filter: "blur(0px)", transform: `${baseTransform} scaleY(1) skewX(0deg)` },
-        { opacity: .35, filter: "blur(3px) brightness(1.25)", transform: `${baseTransform} scaleY(1.12) skewX(5deg)` }
-      ], { duration: 220, easing: "cubic-bezier(.4,0,.8,.35)", fill: "forwards" });
+        {
+          opacity: 1,
+          filter: "url(#fvn-flame-warp) blur(0px) brightness(1)",
+          transform: `${baseTransform} scaleY(1) translateY(0%)`,
+          clipPath: "inset(0% 0% 0% 0%)"
+        },
+        {
+          opacity: .58,
+          filter: "url(#fvn-flame-warp) blur(2px) brightness(1.3)",
+          transform: `${baseTransform} scaleY(1.08) translateY(-2%)`,
+          clipPath: "inset(0% 0% 5% 0%)"
+        }
+      ], { duration: 300, easing: "cubic-bezier(.35,0,.7,.4)", fill: "forwards" });
       later(() => {
         swap();
         animate(portrait, [
-          { opacity: .35, filter: "blur(4px) brightness(1.35)", transform: `${baseTransform} scaleY(1.14) skewX(-5deg)` },
-          { opacity: 1, filter: "blur(0px) brightness(1)", transform: `${baseTransform} scaleY(1) skewX(0deg)` }
-        ], { duration: 320, easing: "cubic-bezier(.2,.7,.25,1)", fill: "forwards" });
-      }, 210);
-      later(cleanup, 560);
+          {
+            opacity: .58,
+            filter: "url(#fvn-flame-warp) blur(2px) brightness(1.35)",
+            transform: `${baseTransform} scaleY(1.10) translateY(-3%)`,
+            clipPath: "inset(0% 0% 6% 0%)"
+          },
+          {
+            opacity: 1,
+            filter: "blur(0px) brightness(1)",
+            transform: `${baseTransform} scaleY(1) translateY(0%)`,
+            clipPath: "inset(0% 0% 0% 0%)"
+          }
+        ], { duration: 420, easing: "cubic-bezier(.18,.72,.25,1)", fill: "forwards" });
+      }, 290);
+      later(cleanup, 735);
       return;
     }
 
