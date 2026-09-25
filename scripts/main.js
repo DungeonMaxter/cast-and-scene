@@ -31,6 +31,7 @@ const DEFAULT_CHARACTER = {
   variants: [],
   activeVariantId: null,
   variantTransition: "none",
+  quickVariantIds: [],
   focusX: 0.5,
   focusY: 0.28,
   focusZoom: 1.65,
@@ -237,6 +238,11 @@ class VisualNovelStage {
     character.variantTransition = ["none", "flip", "dissolve", "blur", "flash"].includes(character.variantTransition)
       ? character.variantTransition
       : "none";
+    const validQuickVariantIds = new Set(["__main__", ...character.variants.map((variant) => String(variant.id))]);
+    character.quickVariantIds = Array.isArray(character.quickVariantIds)
+      ? character.quickVariantIds.slice(0, 6).map((value) => validQuickVariantIds.has(String(value)) ? String(value) : null)
+      : [];
+    while (character.quickVariantIds.length < 6) character.quickVariantIds.push(null);
     character.focusX = Math.min(1, Math.max(0, Number(character.focusX) || 0.5));
     character.focusY = Math.min(1, Math.max(0, Number(character.focusY) || 0.28));
     character.focusZoom = Math.min(3.3333, Math.max(0.8, Number(character.focusZoom) || 1.65));
@@ -984,6 +990,13 @@ class VisualNovelScenePalette {
         if (id) await VisualNovelAPI.toggleSpotlight(id);
         this.render();
       }
+      if (action === "select-quick-variant") {
+        const card = event.target.closest("[data-character-id]");
+        const button = event.target.closest("[data-variant-id]");
+        const id = card?.dataset.characterId;
+        if (id && button) await VisualNovelDirector.setCharacterVariant(id, button.dataset.variantId || null);
+        this.render();
+      }
     });
     this.root.addEventListener("contextmenu", (event) => this.openContextMenu(event));
     return this.root;
@@ -1170,10 +1183,8 @@ class VisualNovelScenePalette {
           <button type="button" data-action="toggle-palette-spotlight" class="fvn-scene-palette__spotlight ${state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "FVN.RestoreSpotlight" : "FVN.Spotlight")}" ${active ? "" : "disabled"}><i class="fa-solid fa-lightbulb"></i></button>
           <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
         </div>
-        <div class="fvn-scene-palette__portrait-meta">
-          <small class="fvn-scene-palette__portrait-name">${VisualNovelAPI.escapeHtml(character.name)}</small>
-          ${VisualNovelDirector.variantOptions(character)}
-        </div>
+        ${VisualNovelDirector.quickVariantSlots(character)}
+        <small class="fvn-scene-palette__portrait-name">${VisualNovelAPI.escapeHtml(character.name)}</small>
       </div>`;
     }).join("") : `<div class="fvn-scene-palette__empty">${game.i18n.localize("FVN.EmptyLibrary")}</div>`;
     VisualNovelStage.scheduleSafeAreaUpdate();
@@ -1300,6 +1311,16 @@ class VisualNovelDirector {
               <button type="button" data-action="add-variant"><i class="fa-solid fa-plus"></i> ${game.i18n.localize("FVN.AddVariant")}</button>
             </div>
             <div class="fvn-variants-editor__list" data-region="variant-list"></div>
+          </section>
+
+          <section class="fvn-quick-variants" data-region="quick-variant-slots" hidden>
+            <div class="fvn-quick-variants__header">
+              <div>
+                <strong>${game.i18n.localize("FVN.QuickVariants")}</strong>
+                <small>${game.i18n.localize("FVN.QuickVariantsHelp")}</small>
+              </div>
+            </div>
+            <div class="fvn-quick-variants__slots" data-region="quick-variant-slot-list"></div>
           </section>
 
           <label data-region="editor-tab-field">
@@ -1673,6 +1694,7 @@ class VisualNovelDirector {
       ...foundry.utils.deepClone(source),
       id: foundry.utils.randomID(),
       sourceId: source.id,
+      quickVariantIds: ["__main__", ...(source.variants ?? []).slice(0, 5).map((variant) => String(variant.id))],
       tabId: this.currentTabId
     });
     await this.setLibrary(library);
@@ -2702,6 +2724,7 @@ class VisualNovelDirector {
     editor.elements.name.value = character?.name ?? "";
     editor.elements.image.value = character?.image ?? "";
     this.renderVariantRows(character?.variants ?? []);
+    this.renderQuickVariantSlots(character, { pool });
     this.renderTabs();
     editor.elements.tabId.value = character?.tabId ?? this.currentTabId ?? this.getTabs()[0]?.id ?? "";
     editor.elements.scale.value = character?.scale ?? 1;
@@ -2716,6 +2739,41 @@ class VisualNovelDirector {
     this.updatePositionOutput(editor);
     this.updateScenePreview();
     editor.elements.name.focus();
+  }
+
+  static renderQuickVariantSlots(character = null, { pool = false } = {}) {
+    const section = this.panel?.querySelector("[data-region='quick-variant-slots']");
+    const list = this.panel?.querySelector("[data-region='quick-variant-slot-list']");
+    if (!section || !list) return;
+    section.hidden = pool;
+    if (pool) {
+      list.innerHTML = "";
+      return;
+    }
+
+    const variants = Array.isArray(character?.variants) ? character.variants : [];
+    const current = Array.isArray(character?.quickVariantIds) ? character.quickVariantIds.slice(0, 6) : [];
+    while (current.length < 6) current.push(null);
+
+    const options = [
+      { value: "", label: game.i18n.localize("FVN.QuickVariantEmpty") },
+      { value: "__main__", label: game.i18n.localize("FVN.MainImage") },
+      ...variants.map((variant) => ({ value: String(variant.id), label: String(variant.name) }))
+    ];
+
+    list.innerHTML = current.map((selected, index) => {
+      const html = options.map((option) =>
+        `<option value="${VisualNovelAPI.escapeHtml(option.value)}" ${String(selected ?? "") === option.value ? "selected" : ""}>${VisualNovelAPI.escapeHtml(option.label)}</option>`
+      ).join("");
+      return `<label><span>${index + 1}</span><select name="quickVariantSlot${index + 1}">${html}</select></label>`;
+    }).join("");
+  }
+
+  static collectQuickVariantIds(form) {
+    return Array.from({ length: 6 }, (_, index) => {
+      const value = form.elements[`quickVariantSlot${index + 1}`]?.value ?? "";
+      return value || null;
+    });
   }
 
   static renderVariantRows(variants = []) {
@@ -2781,6 +2839,40 @@ class VisualNovelDirector {
     return `<label class="fvn-variant-select"><i class="fa-solid fa-masks-theater"></i><select data-action="select-variant" title="${game.i18n.localize("FVN.SelectVariant")}">${options}</select></label>`;
   }
 
+
+  static quickVariantSlots(character) {
+    const configured = Array.isArray(character?.quickVariantIds) ? character.quickVariantIds.slice(0, 6) : [];
+    while (configured.length < 6) configured.push(null);
+    const variants = Array.isArray(character?.variants) ? character.variants : [];
+    const slots = configured.map((slot) => {
+      if (!slot) return { empty: true };
+      if (slot === "__main__") return {
+        empty: false,
+        id: "",
+        name: game.i18n.localize("FVN.MainImage"),
+        image: character?.image || ""
+      };
+      const variant = variants.find((entry) => String(entry.id) === String(slot));
+      return variant
+        ? { empty: false, id: String(variant.id), name: String(variant.name), image: String(variant.image) }
+        : { empty: true };
+    });
+
+    return `<div class="fvn-scene-palette__variant-slots" aria-label="${game.i18n.localize("FVN.QuickVariants")}">${slots.map((slot) => {
+      if (slot.empty) return '<span class="fvn-scene-palette__variant-slot is-empty" aria-hidden="true"></span>';
+      const active = slot.id === ""
+        ? !character.activeVariantId
+        : String(character.activeVariantId) === String(slot.id);
+      return `<button type="button"
+        class="fvn-scene-palette__variant-slot ${active ? "is-active" : ""}"
+        data-action="select-quick-variant"
+        data-variant-id="${VisualNovelAPI.escapeHtml(slot.id)}"
+        title="${VisualNovelAPI.escapeHtml(slot.name)}"
+        aria-label="${VisualNovelAPI.escapeHtml(slot.name)}">
+          <img src="${VisualNovelAPI.escapeHtml(slot.image)}" alt="" />
+        </button>`;
+    }).join("")}</div>`;
+  }
 
   static transitionOptions(character) {
     if (!Array.isArray(character?.variants) || !character.variants.length) return "";
@@ -3066,6 +3158,7 @@ class VisualNovelDirector {
       image,
       variants,
       activeVariantId: variants.some((variant) => String(variant.id) === String(existing.activeVariantId)) ? existing.activeVariantId : null,
+      quickVariantIds: this.collectQuickVariantIds(form),
       tabId: form.elements.tabId.value || this.currentTabId || this.getTabs()[0]?.id || null,
       x: Math.min(1, Math.max(0, Number(form.elements.x.value) || 0)),
       y: Math.min(1, Math.max(0, Number(form.elements.y.value) || 0)),
