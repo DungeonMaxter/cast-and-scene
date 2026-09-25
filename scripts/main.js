@@ -1597,7 +1597,10 @@ class VisualNovelDirector {
     this.resizeState = null;
     document.documentElement.classList.remove("fvn-document--resizing");
     const rect = this.panel.getBoundingClientRect();
-    localStorage.setItem(`${MODULE_ID}.directorSize`, JSON.stringify({ width: rect.width, height: rect.height }));
+    const sizeKey = this.panel.classList.contains("fvn-director--editor-mode")
+      ? `${MODULE_ID}.directorEditorSize`
+      : `${MODULE_ID}.directorSize`;
+    localStorage.setItem(sizeKey, JSON.stringify({ width: rect.width, height: rect.height }));
   }
 
   static restorePanelSize() {
@@ -2646,8 +2649,18 @@ class VisualNovelDirector {
     };
     this.panel.classList.add("fvn-director--editor-mode");
     const bounds = this.getPanelBounds();
-    const compactWidth = Math.min(720, bounds.maxWidth);
-    const compactHeight = Math.min(760, bounds.maxHeight);
+    let savedEditorSize = null;
+    try { savedEditorSize = JSON.parse(localStorage.getItem(`${MODULE_ID}.directorEditorSize`) || "null"); }
+    catch (_error) { savedEditorSize = null; }
+
+    const compactWidth = Number.isFinite(savedEditorSize?.width)
+      ? Math.min(bounds.maxWidth, Math.max(bounds.minWidth, savedEditorSize.width))
+      : Math.min(720, bounds.maxWidth);
+
+    const compactHeight = Number.isFinite(savedEditorSize?.height)
+      ? Math.min(bounds.maxHeight, Math.max(bounds.minHeight, savedEditorSize.height))
+      : Math.min(760, bounds.maxHeight);
+
     this.panel.style.width = `${compactWidth}px`;
     this.panel.style.height = `${compactHeight}px`;
     const current = this.panel.getBoundingClientRect();
