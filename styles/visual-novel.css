@@ -3157,3 +3157,27 @@ body.theme-light .fvn-preset-performance__summary {
 body.theme-light .fvn-preset-status {
   color: #4f4942;
 }
+
+
+/* v1.1.0 - clearer active portrait controls in light Quick Access */
+body.theme-light .fvn-scene-palette__focus.is-active,
+body.theme-light .fvn-scene-palette__silhouette.is-active {
+  border-color: rgba(45, 140, 205, .82);
+  background: rgba(74, 168, 230, .22);
+  color: #176b9f;
+  box-shadow:
+    0 0 0 2px rgba(74, 168, 230, .14),
+    0 2px 8px rgba(45, 110, 160, .16);
+}
+
+body.theme-light .fvn-scene-palette__focus.is-active i,
+body.theme-light .fvn-scene-palette__silhouette.is-active i {
+  color: #176b9f;
+}
+
+body.theme-light .fvn-scene-palette__focus.is-active:hover,
+body.theme-light .fvn-scene-palette__silhouette.is-active:hover {
+  border-color: rgba(28, 125, 190, .95);
+  background: rgba(74, 168, 230, .30);
+  color: #0f5f91;
+}
