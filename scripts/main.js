@@ -1187,16 +1187,6 @@ class VisualNovelDirector {
       </div>
 
       <footer class="fvn-director__footer">
-        <section class="fvn-preset-performance" data-region="preset-performance">
-          <div class="fvn-preset-performance__heading">
-            <span><i class="fa-solid fa-gauge-high"></i> ${game.i18n.localize("FVN.PresetLoad")}</span>
-            <strong data-region="performance-label">${game.i18n.localize("FVN.PerformanceCalculating")}</strong>
-          </div>
-          <div class="fvn-performance-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <span data-region="performance-fill"></span>
-          </div>
-          <div class="fvn-preset-performance__summary" data-region="performance-summary"></div>
-        </section>
         <section class="fvn-footer-group fvn-footer-group--stage">
           <div class="fvn-footer-group__title"><i class="fa-solid fa-clapperboard"></i> ${game.i18n.localize("FVN.Stage")}</div>
           <div class="fvn-background-controls">
@@ -1233,10 +1223,22 @@ class VisualNovelDirector {
             <button type="button" data-action="toggle-all" class="fvn-danger"><i class="fa-solid fa-eye-slash"></i> <span>${game.i18n.localize("FVN.HideAll")}</span></button>
           </div>
         </section>
-        <div class="fvn-preset-status" data-region="preset-status" data-level="green">
-          <i class="fa-solid fa-circle-info"></i>
-          <span>${game.i18n.localize("FVN.PerformanceCalculating")}</span>
-        </div>
+        <section class="fvn-performance-strip">
+          <div class="fvn-preset-performance" data-region="preset-performance">
+            <div class="fvn-preset-performance__heading">
+              <span><i class="fa-solid fa-gauge-high"></i> ${game.i18n.localize("FVN.PresetLoad")}</span>
+              <strong data-region="performance-label">${game.i18n.localize("FVN.PerformanceCalculating")}</strong>
+            </div>
+            <div class="fvn-performance-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span data-region="performance-fill"></span>
+            </div>
+            <div class="fvn-preset-performance__summary" data-region="performance-summary"></div>
+          </div>
+          <div class="fvn-preset-status" data-region="preset-status" data-level="green">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>${game.i18n.localize("FVN.PerformanceCalculating")}</span>
+          </div>
+        </section>
       </footer>
       <div class="fvn-director__resize-handle" data-role="resize-handle" aria-hidden="true"></div>
     `;
