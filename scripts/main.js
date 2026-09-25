@@ -1116,6 +1116,7 @@ class VisualNovelDirector {
         </section>
 
         <form class="fvn-editor fvn-editor--hidden" data-region="editor">
+          <div class="fvn-editor__scroll">
           <h3 data-region="editor-title">${game.i18n.localize("FVN.NewCharacter")}</h3>
 
           <label>
@@ -1176,6 +1177,7 @@ class VisualNovelDirector {
             <input type="hidden" name="y" value="1" />
           </div>
 
+          </div>
           <div class="fvn-editor__actions">
             <button type="submit"><i class="fa-solid fa-floppy-disk"></i> ${game.i18n.localize("FVN.Save")}</button>
             <button type="button" data-action="cancel-edit">${game.i18n.localize("FVN.Cancel")}</button>
