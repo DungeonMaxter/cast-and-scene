@@ -3258,3 +3258,33 @@ body.theme-light .fvn-transition-select select {
   overflow: hidden;
   pointer-events: none;
 }
+
+
+/* v1.1.0 - space Scene Preset variant and transition controls */
+.fvn-preset-variant-controls {
+  column-gap: 10px;
+}
+
+.fvn-character .fvn-preset-variant-controls {
+  margin-right: 8px;
+}
+
+.fvn-preset-variant-controls .fvn-variant-select,
+.fvn-preset-variant-controls .fvn-transition-select {
+  min-width: 0;
+}
+
+.fvn-preset-variant-controls .fvn-transition-select {
+  padding-left: 2px;
+}
+
+@container (max-width: 650px) {
+  .fvn-character .fvn-preset-variant-controls {
+    margin-right: 4px;
+  }
+
+  .fvn-preset-variant-controls {
+    row-gap: 6px;
+    column-gap: 6px;
+  }
+}
