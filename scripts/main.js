@@ -1136,7 +1136,11 @@ class VisualNovelScenePalette {
     }
     const camera = VisualNovelStage.normalizeCamera(state.camera);
     const resetCameraButton = root.querySelector('[data-action="reset-palette-camera"]');
-    if (resetCameraButton) resetCameraButton.disabled = !camera.enabled && camera.x === 0 && camera.y === 0 && camera.zoom === 1;
+    if (resetCameraButton) {
+      const cameraIsHome = !camera.enabled && camera.x === 0 && camera.y === 0 && camera.zoom === 1;
+      resetCameraButton.disabled = cameraIsHome;
+      resetCameraButton.hidden = cameraIsHome;
+    }
     const allButton = root.querySelector('[data-action="toggle-palette-all"]');
     if (allButton) {
       const hasVisible = state.portraits.length > 0;
@@ -1166,8 +1170,10 @@ class VisualNovelScenePalette {
           <button type="button" data-action="toggle-palette-spotlight" class="fvn-scene-palette__spotlight ${state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "FVN.RestoreSpotlight" : "FVN.Spotlight")}" ${active ? "" : "disabled"}><i class="fa-solid fa-lightbulb"></i></button>
           <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
         </div>
-        <small class="fvn-scene-palette__portrait-name">${VisualNovelAPI.escapeHtml(character.name)}</small>
-        ${VisualNovelDirector.variantOptions(character)}
+        <div class="fvn-scene-palette__portrait-meta">
+          <small class="fvn-scene-palette__portrait-name">${VisualNovelAPI.escapeHtml(character.name)}</small>
+          ${VisualNovelDirector.variantOptions(character)}
+        </div>
       </div>`;
     }).join("") : `<div class="fvn-scene-palette__empty">${game.i18n.localize("FVN.EmptyLibrary")}</div>`;
     VisualNovelStage.scheduleSafeAreaUpdate();
