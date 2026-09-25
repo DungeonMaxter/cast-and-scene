@@ -1986,3 +1986,128 @@
     align-items: flex-start;
   }
 }
+
+
+/* v1.1.0 - responsive Director and variant controls */
+.fvn-director {
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+}
+
+.fvn-director__content,
+.fvn-editor {
+  min-width: 0;
+  min-height: 0;
+}
+
+.fvn-director--editor-mode .fvn-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.fvn-variants-editor {
+  min-width: 0;
+}
+
+.fvn-variants-editor__list {
+  max-height: clamp(150px, 28vh, 300px);
+  min-width: 0;
+  padding-right: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.fvn-editor__actions {
+  position: sticky;
+  bottom: -12px;
+  z-index: 5;
+  margin: 0 -14px -12px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid rgba(255,255,255,.10);
+  background: linear-gradient(to bottom, rgba(18,18,21,.96), rgba(18,18,21,.995));
+  backdrop-filter: blur(8px);
+}
+
+.fvn-character .fvn-variant-select {
+  flex: 0 1 170px;
+  width: clamp(118px, 18vw, 170px);
+}
+
+.fvn-character .fvn-variant-select select {
+  width: 100%;
+  max-width: none;
+}
+
+.fvn-scene-palette__item .fvn-variant-select {
+  width: auto;
+}
+
+@media (max-width: 760px) {
+  .fvn-director {
+    min-width: min(360px, calc(100vw - 16px));
+  }
+
+  .fvn-director__body {
+    grid-template-columns: 148px minmax(0, 1fr);
+  }
+
+  .fvn-director__content {
+    padding: 10px;
+  }
+
+  .fvn-toolbar {
+    grid-template-columns: minmax(110px, 1fr) 34px auto;
+  }
+
+  .fvn-character .fvn-variant-select {
+    flex-basis: 132px;
+    width: 132px;
+  }
+
+  .fvn-editor__actions {
+    bottom: -10px;
+    margin: 0 -10px -10px;
+    padding: 9px 10px 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .fvn-director__body {
+    grid-template-columns: 116px minmax(0, 1fr);
+  }
+
+  .fvn-director__sidebar {
+    padding: 8px 6px;
+  }
+
+  .fvn-view-switch button {
+    padding: 0 6px;
+  }
+
+  .fvn-character__actions {
+    flex-wrap: wrap;
+  }
+
+  .fvn-character .fvn-variant-select {
+    order: 10;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 190px;
+  }
+
+  .fvn-variant-row {
+    grid-template-columns: minmax(72px, .7fr) minmax(120px, 1.3fr) 30px;
+  }
+
+  .fvn-variants-editor__header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-height: 720px) {
+  .fvn-variants-editor__list {
+    max-height: clamp(120px, 22vh, 190px);
+  }
+}
