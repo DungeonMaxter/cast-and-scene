@@ -3181,3 +3181,87 @@ body.theme-light .fvn-scene-palette__silhouette.is-active:hover {
   background: rgba(74, 168, 230, .30);
   color: #0f5f91;
 }
+
+
+/* v1.1.0 - Scene Preset image variant transitions */
+.fvn-preset-variant-controls {
+  grid-area: variant;
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(90px, .9fr);
+  gap: 6px;
+  min-width: 0;
+  align-items: center;
+}
+
+.fvn-preset-variant-controls .fvn-variant-select {
+  grid-area: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  flex: none !important;
+}
+
+.fvn-transition-select {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+}
+
+.fvn-transition-select i {
+  flex: 0 0 auto;
+  opacity: .68;
+}
+
+.fvn-transition-select select {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  font-size: .76rem;
+}
+
+@container (max-width: 650px) {
+  .fvn-preset-variant-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    max-width: 210px;
+  }
+}
+
+@container (max-width: 470px) {
+  .fvn-preset-variant-controls {
+    max-width: none;
+  }
+}
+
+body.theme-light .fvn-transition-select {
+  color: #4b433b;
+}
+
+body.theme-light .fvn-transition-select select {
+  border-color: rgba(58, 51, 43, .24);
+  background: rgba(255, 255, 255, .76);
+  color: #302a23;
+}
+
+.fvn-stage__portrait-wrap--visible {
+  isolation: isolate;
+}
+
+.fvn-stage__portrait-wrap--visible.fvn-variant-transition--flash::after {
+  content: "";
+  position: absolute;
+  inset: -3%;
+  z-index: 8;
+  border-radius: 10px;
+  background: rgba(255,255,255,.82);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: fvn-variant-flash 300ms ease-out both;
+}
+
+@keyframes fvn-variant-flash {
+  0% { opacity: 0; transform: scale(.98); }
+  38% { opacity: .92; transform: scale(1.015); }
+  100% { opacity: 0; transform: scale(1.03); }
+}
