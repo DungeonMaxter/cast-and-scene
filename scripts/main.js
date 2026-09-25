@@ -1160,11 +1160,13 @@ class VisualNovelScenePalette {
       return `<div class="fvn-scene-palette__item" data-character-id="${character.id}">
         <button type="button" data-action="toggle-palette-character" class="fvn-scene-palette__portrait ${active ? "is-active" : ""}" title="${VisualNovelAPI.escapeHtml(character.name)}">
           <span class="fvn-checkerboard"><img src="${VisualNovelDirector.getDisplayImage(character)}" alt="${VisualNovelAPI.escapeHtml(character.name)}" /></span>
-          <small>${VisualNovelAPI.escapeHtml(character.name)}</small>
         </button>
-        <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
-        <button type="button" data-action="toggle-palette-silhouette" class="fvn-scene-palette__silhouette ${Boolean(character.silhouette) ? "is-active" : ""}" title="${game.i18n.localize("FVN.Silhouette")}"><i class="fa-solid fa-user-secret"></i></button>
-        <button type="button" data-action="toggle-palette-spotlight" class="fvn-scene-palette__spotlight ${state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "FVN.RestoreSpotlight" : "FVN.Spotlight")}" ${active ? "" : "disabled"}><i class="fa-solid fa-lightbulb"></i></button>
+        <div class="fvn-scene-palette__portrait-tools" role="group" aria-label="${VisualNovelAPI.escapeHtml(character.name)}">
+          <button type="button" data-action="toggle-palette-silhouette" class="fvn-scene-palette__silhouette ${Boolean(character.silhouette) ? "is-active" : ""}" title="${game.i18n.localize("FVN.Silhouette")}"><i class="fa-solid fa-user-secret"></i></button>
+          <button type="button" data-action="toggle-palette-spotlight" class="fvn-scene-palette__spotlight ${state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "FVN.RestoreSpotlight" : "FVN.Spotlight")}" ${active ? "" : "disabled"}><i class="fa-solid fa-lightbulb"></i></button>
+          <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
+        </div>
+        <small class="fvn-scene-palette__portrait-name">${VisualNovelAPI.escapeHtml(character.name)}</small>
         ${VisualNovelDirector.variantOptions(character)}
       </div>`;
     }).join("") : `<div class="fvn-scene-palette__empty">${game.i18n.localize("FVN.EmptyLibrary")}</div>`;
