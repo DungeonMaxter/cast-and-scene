@@ -2324,3 +2324,62 @@
     justify-content: flex-start;
   }
 }
+
+
+/* v1.1.0 - responsive footer based on actual Director width */
+.fvn-director {
+  container-type: inline-size;
+}
+
+@container (max-width: 900px) {
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-director__footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-preset-status {
+    grid-column: 1;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-preset-performance,
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-footer-group--stage {
+    min-width: 0;
+  }
+}
+
+@container (max-width: 650px) {
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-background-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-background-controls label:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-stage-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-stage-actions .fvn-danger {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-stage-actions button {
+    min-width: 0;
+  }
+}
+
+@container (max-width: 520px) {
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-background-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-background-controls label:last-child {
+    grid-column: auto;
+  }
+
+  .fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-stage-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
