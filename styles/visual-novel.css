@@ -3123,3 +3123,37 @@ body.theme-light .fvn-scene-palette__empty-tab {
 body.theme-light .fvn-scene-palette__toggle {
   color-scheme: dark;
 }
+
+
+/* v1.1.0 - improve light-theme performance diagnostic contrast */
+body.theme-light .fvn-preset-performance__heading > span {
+  color: #4e473f;
+}
+
+body.theme-light .fvn-preset-performance__heading strong {
+  color: #7a5a12;
+}
+
+body.theme-light .fvn-preset-performance[data-level="green"] .fvn-preset-performance__heading strong {
+  color: #2f6f3b;
+}
+
+body.theme-light .fvn-preset-performance[data-level="yellow"] .fvn-preset-performance__heading strong {
+  color: #8a6810;
+}
+
+body.theme-light .fvn-preset-performance[data-level="orange"] .fvn-preset-performance__heading strong {
+  color: #9a5617;
+}
+
+body.theme-light .fvn-preset-performance[data-level="red"] .fvn-preset-performance__heading strong {
+  color: #9a3a34;
+}
+
+body.theme-light .fvn-preset-performance__summary {
+  color: #5f574f;
+}
+
+body.theme-light .fvn-preset-status {
+  color: #4f4942;
+}
