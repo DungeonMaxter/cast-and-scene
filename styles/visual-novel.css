@@ -3250,14 +3250,6 @@ body.theme-light .fvn-transition-select select {
 
 
 
-/* v1.1.0 - transient transition filter definitions */
-.fvn-stage__effects {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
 
 
 /* v1.1.0 - space Scene Preset variant and transition controls */
@@ -3338,4 +3330,95 @@ body.theme-light .fvn-transition-select select {
   .fvn-preset-variant-controls .fvn-transition-select {
     padding-left: 0;
   }
+}
+
+
+/* v1.1.0 - Spotlight: foreground speaker emphasis without changing preset data */
+.fvn-stage__portrait-wrap {
+  --fvn-spotlight-scale: 1;
+  filter: brightness(1);
+  transition:
+    opacity 240ms ease,
+    transform 260ms ease,
+    filter 280ms ease;
+}
+
+.fvn-stage__portrait-wrap--visible {
+  transform:
+    translate(-50%, -100%)
+    scale(var(--fvn-character-scale))
+    scale(var(--fvn-spotlight-scale));
+}
+
+.fvn-stage__portrait-wrap--exiting {
+  transform:
+    translate(-50%, calc(-100% + 28px))
+    scale(var(--fvn-character-scale))
+    scale(var(--fvn-spotlight-scale)) !important;
+}
+
+.fvn-stage--spotlight-active .fvn-stage__portrait-wrap--spotlight {
+  --fvn-spotlight-scale: 1.045;
+  filter: brightness(1);
+}
+
+.fvn-stage--spotlight-active .fvn-stage__portrait-wrap--spotlight-dimmed {
+  --fvn-spotlight-scale: .975;
+  filter: brightness(.28);
+}
+
+/* Quick Access Spotlight sits between Silhouette and Camera Focus. */
+.fvn-scene-palette__spotlight {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  z-index: 4;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(17,16,20,.88);
+  color: #e6d5aa;
+  border: 1px solid rgba(230,213,170,.48);
+  opacity: .84;
+  box-shadow: 0 2px 8px rgba(0,0,0,.38);
+}
+
+.fvn-scene-palette__spotlight:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.fvn-scene-palette__spotlight:disabled {
+  display: none;
+}
+
+.fvn-scene-palette__spotlight.is-active {
+  opacity: 1;
+  border-color: #9edcff;
+  background: #176b9f;
+  color: #e9f7ff;
+  box-shadow: 0 0 0 2px rgba(74,168,230,.22), 0 3px 12px rgba(0,0,0,.45);
+}
+
+body.theme-light .fvn-scene-palette__spotlight {
+  border-color: rgba(58,51,43,.20);
+  background: rgba(255,255,255,.52);
+  color: #4b433b;
+}
+
+body.theme-light .fvn-scene-palette__spotlight:hover:not(:disabled) {
+  border-color: rgba(45,140,205,.48);
+  background: rgba(74,168,230,.10);
+  color: #176b9f;
+}
+
+body.theme-light .fvn-scene-palette__spotlight.is-active {
+  border-color: rgba(45,140,205,.82);
+  background: rgba(74,168,230,.22);
+  color: #176b9f;
+  box-shadow: 0 0 0 2px rgba(74,168,230,.14), 0 2px 8px rgba(45,110,160,.16);
 }
