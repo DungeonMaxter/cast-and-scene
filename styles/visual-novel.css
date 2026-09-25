@@ -2383,3 +2383,121 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* v1.1.0 - compact diagnostic footer strip */
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-director__footer {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.fvn-director:not(.fvn-director--pool-mode):not(.fvn-director--editor-mode) .fvn-footer-group--stage {
+  min-width: 0;
+}
+
+.fvn-performance-strip {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(220px, 1fr) minmax(0, 1.5fr);
+  grid-template-areas: "label meter status";
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--fvn-border) 82%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--fvn-panel) 84%, transparent);
+}
+
+.fvn-performance-strip .fvn-preset-performance {
+  display: contents;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.fvn-performance-strip .fvn-preset-performance__heading {
+  grid-area: label;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.fvn-performance-strip .fvn-preset-performance__heading > span {
+  font-size: 11px;
+}
+
+.fvn-performance-strip .fvn-preset-performance__heading strong {
+  font-size: 11px;
+}
+
+.fvn-performance-strip .fvn-performance-bar {
+  grid-area: meter;
+  min-width: 120px;
+  height: 8px;
+}
+
+.fvn-performance-strip .fvn-preset-performance__summary {
+  grid-area: meter;
+  align-self: end;
+  justify-self: end;
+  margin: 0;
+  padding-top: 14px;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.fvn-performance-strip .fvn-preset-status {
+  grid-area: status;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.fvn-performance-strip .fvn-preset-status span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (max-width: 820px) {
+  .fvn-performance-strip {
+    grid-template-columns: auto minmax(140px, 1fr);
+    grid-template-areas:
+      "label meter"
+      "status status";
+    row-gap: 6px;
+  }
+
+  .fvn-performance-strip .fvn-preset-status span {
+    white-space: normal;
+  }
+}
+
+@container (max-width: 560px) {
+  .fvn-performance-strip {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "label"
+      "meter"
+      "status";
+  }
+
+  .fvn-performance-strip .fvn-preset-performance__heading {
+    justify-content: space-between;
+  }
+
+  .fvn-performance-strip .fvn-preset-performance__summary {
+    position: static;
+    grid-area: status;
+    justify-self: stretch;
+    padding: 0;
+    white-space: normal;
+  }
+}
