@@ -473,7 +473,7 @@ class VisualNovelStage {
           transform: `${baseTransform} scaleY(1.08) translateY(-2%)`,
           clipPath: "inset(0% 0% 5% 0%)"
         }
-      ], { duration: 300, easing: "cubic-bezier(.35,0,.7,.4)", fill: "forwards" });
+      ], { duration: 560, easing: "cubic-bezier(.35,0,.7,.4)", fill: "forwards" });
       later(() => {
         swap();
         animate(portrait, [
@@ -489,9 +489,9 @@ class VisualNovelStage {
             transform: `${baseTransform} scaleY(1) translateY(0%)`,
             clipPath: "inset(0% 0% 0% 0%)"
           }
-        ], { duration: 420, easing: "cubic-bezier(.18,.72,.25,1)", fill: "forwards" });
-      }, 290);
-      later(cleanup, 735);
+        ], { duration: 760, easing: "cubic-bezier(.18,.72,.25,1)", fill: "forwards" });
+      }, 540);
+      later(cleanup, 1325);
       return;
     }
 
