@@ -2143,3 +2143,52 @@
   background: transparent;
   backdrop-filter: none;
 }
+
+
+/* v1.1.0 - single-scroll editor layout */
+.fvn-director--editor-mode .fvn-editor__scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fvn-director--editor-mode .fvn-variants-editor {
+  flex: 1 1 auto;
+  min-height: 150px;
+  max-height: none;
+  overflow: hidden;
+}
+
+.fvn-director--editor-mode .fvn-variants-editor__header {
+  flex: 0 0 auto;
+}
+
+.fvn-director--editor-mode .fvn-variants-editor__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.fvn-director--editor-mode .fvn-editor__grid,
+.fvn-director--editor-mode .fvn-focus-editor,
+.fvn-director--editor-mode .fvn-direct-position,
+.fvn-director--editor-mode [data-region="editor-tab-field"] {
+  flex: 0 0 auto;
+}
+
+@media (max-height: 700px) {
+  .fvn-director--editor-mode .fvn-editor__scroll {
+    overflow-y: auto;
+  }
+
+  .fvn-director--editor-mode .fvn-variants-editor {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .fvn-director--editor-mode .fvn-variants-editor__list {
+    max-height: 170px;
+  }
+}
