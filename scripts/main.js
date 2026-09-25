@@ -240,7 +240,8 @@ class VisualNovelStage {
     if (!character.variants.some((variant) => String(variant.id) === String(character.activeVariantId))) {
       character.activeVariantId = null;
     }
-    character.variantTransition = ["none", "flip", "flame", "blur", "flash"].includes(character.variantTransition)
+    if (character.variantTransition === "flame") character.variantTransition = "dissolve";
+    character.variantTransition = ["none", "flip", "dissolve", "blur", "flash"].includes(character.variantTransition)
       ? character.variantTransition
       : "none";
     character.focusX = Math.min(1, Math.max(0, Number(character.focusX) || 0.5));
@@ -458,40 +459,23 @@ class VisualNovelStage {
       return;
     }
 
-    if (transition === "flame") {
-      portrait.style.transformOrigin = "50% 100%";
-      animate(portrait, [
-        {
-          opacity: 1,
-          filter: "url(#fvn-flame-warp) blur(0px) brightness(1)",
-          transform: `${baseTransform} scaleY(1) translateY(0%)`,
-          clipPath: "inset(0% 0% 0% 0%)"
-        },
-        {
-          opacity: .58,
-          filter: "url(#fvn-flame-warp) blur(2px) brightness(1.3)",
-          transform: `${baseTransform} scaleY(1.08) translateY(-2%)`,
-          clipPath: "inset(0% 0% 5% 0%)"
-        }
-      ], { duration: 560, easing: "cubic-bezier(.35,0,.7,.4)", fill: "forwards" });
+    if (transition === "dissolve") {
+      animate(portrait,
+        [
+          { opacity: 1 },
+          { opacity: 0 }
+        ],
+        { duration: 360, easing: "ease-in-out", fill: "forwards" });
       later(() => {
         swap();
-        animate(portrait, [
-          {
-            opacity: .58,
-            filter: "url(#fvn-flame-warp) blur(2px) brightness(1.35)",
-            transform: `${baseTransform} scaleY(1.10) translateY(-3%)`,
-            clipPath: "inset(0% 0% 6% 0%)"
-          },
-          {
-            opacity: 1,
-            filter: "blur(0px) brightness(1)",
-            transform: `${baseTransform} scaleY(1) translateY(0%)`,
-            clipPath: "inset(0% 0% 0% 0%)"
-          }
-        ], { duration: 760, easing: "cubic-bezier(.18,.72,.25,1)", fill: "forwards" });
-      }, 540);
-      later(cleanup, 1325);
+        animate(portrait,
+          [
+            { opacity: 0 },
+            { opacity: 1 }
+          ],
+          { duration: 420, easing: "ease-in-out", fill: "forwards" });
+      }, 350);
+      later(cleanup, 790);
       return;
     }
 
@@ -2780,13 +2764,13 @@ class VisualNovelDirector {
 
   static transitionOptions(character) {
     if (!Array.isArray(character?.variants) || !character.variants.length) return "";
-    const selected = ["none", "flip", "flame", "blur", "flash"].includes(character.variantTransition)
+    const selected = ["none", "flip", "dissolve", "blur", "flash"].includes(character.variantTransition)
       ? character.variantTransition
       : "none";
     const options = [
       ["none", "FVN.TransitionNone"],
       ["flip", "FVN.TransitionFlip"],
-      ["flame", "FVN.TransitionFlame"],
+      ["dissolve", "FVN.TransitionDissolve"],
       ["blur", "FVN.TransitionBlur"],
       ["flash", "FVN.TransitionFlash"]
     ].map(([value, key]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${game.i18n.localize(key)}</option>`).join("");
@@ -2815,7 +2799,7 @@ class VisualNovelDirector {
 
 
   static async setCharacterTransition(characterId, transition) {
-    const allowed = ["none", "flip", "flame", "blur", "flash"];
+    const allowed = ["none", "flip", "dissolve", "blur", "flash"];
     const library = this.getLibrary();
     const index = library.findIndex((entry) => String(entry.id) === String(characterId));
     if (index < 0) return;
