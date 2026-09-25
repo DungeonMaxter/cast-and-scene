@@ -30,6 +30,7 @@ const DEFAULT_CHARACTER = {
   tabId: null,
   variants: [],
   activeVariantId: null,
+  variantTransition: "none",
   focusX: 0.5,
   focusY: 0.28,
   focusZoom: 1.65,
@@ -231,6 +232,9 @@ class VisualNovelStage {
     if (!character.variants.some((variant) => String(variant.id) === String(character.activeVariantId))) {
       character.activeVariantId = null;
     }
+    character.variantTransition = ["none", "flip", "flame", "blur", "flash"].includes(character.variantTransition)
+      ? character.variantTransition
+      : "none";
     character.focusX = Math.min(1, Math.max(0, Number(character.focusX) || 0.5));
     character.focusY = Math.min(1, Math.max(0, Number(character.focusY) || 0.28));
     character.focusZoom = Math.min(3.3333, Math.max(0.8, Number(character.focusZoom) || 1.65));
@@ -352,6 +356,115 @@ class VisualNovelStage {
     return wrap;
   }
 
+  static runVariantTransition(wrap, portrait, silhouetteOverlay, nextSrc, transition, mirror = false) {
+    const previousSrc = portrait.getAttribute("src") || "";
+    if (!nextSrc || previousSrc === nextSrc || !previousSrc || transition === "none") {
+      portrait.src = nextSrc;
+      if (silhouetteOverlay) silhouetteOverlay.src = nextSrc;
+      return;
+    }
+
+    if (wrap._fvnVariantTransition?.cancel) wrap._fvnVariantTransition.cancel();
+
+    const baseTransform = `scaleX(${mirror ? -1 : 1})`;
+    let cancelled = false;
+    const timers = [];
+    const animations = [];
+    const later = (fn, delay) => {
+      const id = window.setTimeout(() => { if (!cancelled) fn(); }, delay);
+      timers.push(id);
+    };
+    const animate = (element, keyframes, options) => {
+      const animation = element?.animate?.(keyframes, options);
+      if (animation) animations.push(animation);
+      return animation;
+    };
+    const swap = () => {
+      portrait.src = nextSrc;
+      if (silhouetteOverlay) silhouetteOverlay.src = nextSrc;
+    };
+    const cleanup = () => {
+      wrap.classList.remove("fvn-variant-transition--flash");
+      portrait.style.removeProperty("filter");
+      portrait.style.removeProperty("opacity");
+      portrait.style.transform = baseTransform;
+      portrait.style.removeProperty("transform-origin");
+      wrap._fvnVariantTransition = null;
+    };
+
+    wrap._fvnVariantTransition = {
+      cancel: () => {
+        cancelled = true;
+        timers.forEach((id) => clearTimeout(id));
+        animations.forEach((animation) => animation.cancel());
+        swap();
+        cleanup();
+      }
+    };
+
+    if (transition === "flip") {
+      portrait.style.transformOrigin = "50% 50%";
+      animate(portrait,
+        [{ transform: `${baseTransform} perspective(700px) rotateY(0deg)` }, { transform: `${baseTransform} perspective(700px) rotateY(90deg)` }],
+        { duration: 190, easing: "ease-in", fill: "forwards" });
+      later(() => {
+        swap();
+        animate(portrait,
+          [{ transform: `${baseTransform} perspective(700px) rotateY(-90deg)` }, { transform: `${baseTransform} perspective(700px) rotateY(0deg)` }],
+          { duration: 220, easing: "ease-out", fill: "forwards" });
+      }, 190);
+      later(cleanup, 430);
+      return;
+    }
+
+    if (transition === "blur") {
+      animate(portrait,
+        [{ opacity: 1, filter: "blur(0px)" }, { opacity: .18, filter: "blur(8px)" }],
+        { duration: 180, easing: "ease-in", fill: "forwards" });
+      later(() => {
+        swap();
+        animate(portrait,
+          [{ opacity: .18, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)" }],
+          { duration: 260, easing: "ease-out", fill: "forwards" });
+      }, 180);
+      later(cleanup, 460);
+      return;
+    }
+
+    if (transition === "flash") {
+      wrap.classList.add("fvn-variant-transition--flash");
+      animate(portrait,
+        [{ filter: "brightness(1)" }, { filter: "brightness(2.25)" }],
+        { duration: 115, easing: "ease-in", fill: "forwards" });
+      later(swap, 105);
+      later(() => animate(portrait,
+        [{ filter: "brightness(2.25)" }, { filter: "brightness(1)" }],
+        { duration: 190, easing: "ease-out", fill: "forwards" }), 115);
+      later(cleanup, 325);
+      return;
+    }
+
+    if (transition === "flame") {
+      portrait.style.transformOrigin = "50% 100%";
+      animate(portrait, [
+        { opacity: 1, filter: "blur(0px)", transform: `${baseTransform} scaleY(1) skewX(0deg)` },
+        { opacity: .35, filter: "blur(3px) brightness(1.25)", transform: `${baseTransform} scaleY(1.12) skewX(5deg)` }
+      ], { duration: 220, easing: "cubic-bezier(.4,0,.8,.35)", fill: "forwards" });
+      later(() => {
+        swap();
+        animate(portrait, [
+          { opacity: .35, filter: "blur(4px) brightness(1.35)", transform: `${baseTransform} scaleY(1.14) skewX(-5deg)` },
+          { opacity: 1, filter: "blur(0px) brightness(1)", transform: `${baseTransform} scaleY(1) skewX(0deg)` }
+        ], { duration: 320, easing: "cubic-bezier(.2,.7,.25,1)", fill: "forwards" });
+      }, 210);
+      later(cleanup, 560);
+      return;
+    }
+
+    swap();
+    cleanup();
+  }
+
   static renderPortrait(payload = {}, { preview = false } = {}) {
     const character = this.normalizeCharacter(payload);
     const id = preview ? this.previewId : character.id;
@@ -384,14 +497,25 @@ class VisualNovelStage {
     }
 
     if (character.image) {
-      portrait.src = character.image;
-      if (silhouetteOverlay) silhouetteOverlay.src = character.image;
+      if (!preview) {
+        this.runVariantTransition(
+          wrap,
+          portrait,
+          silhouetteOverlay,
+          character.image,
+          character.variantTransition ?? "none",
+          Boolean(character.mirror)
+        );
+      } else {
+        portrait.src = character.image;
+        if (silhouetteOverlay) silhouetteOverlay.src = character.image;
+      }
     } else {
       portrait.removeAttribute("src");
       silhouetteOverlay?.removeAttribute("src");
     }
     portrait.alt = character.name || game.i18n.localize("FVN.UnknownCharacter");
-    portrait.style.transform = `scaleX(${character.mirror ? -1 : 1})`;
+    if (!wrap._fvnVariantTransition) portrait.style.transform = `scaleX(${character.mirror ? -1 : 1})`;
     if (silhouetteOverlay) silhouetteOverlay.style.transform = `scaleX(${character.mirror ? -1 : 1})`;
 
     requestAnimationFrame(() => wrap.classList.add("fvn-stage__portrait-wrap--visible"));
@@ -1340,10 +1464,17 @@ class VisualNovelDirector {
     editor.addEventListener("change", () => this.updateScenePreview());
 
     this.panel.addEventListener("change", async (event) => {
-      const select = event.target.closest("[data-action='select-variant']");
-      if (!select) return;
-      const characterId = select.closest("[data-character-id]")?.dataset.characterId;
-      if (characterId) await this.setCharacterVariant(characterId, select.value || null);
+      const variantSelect = event.target.closest("[data-action='select-variant']");
+      if (variantSelect) {
+        const characterId = variantSelect.closest("[data-character-id]")?.dataset.characterId;
+        if (characterId) await this.setCharacterVariant(characterId, variantSelect.value || null);
+        return;
+      }
+      const transitionSelect = event.target.closest("[data-action='select-variant-transition']");
+      if (transitionSelect) {
+        const characterId = transitionSelect.closest("[data-character-id]")?.dataset.characterId;
+        if (characterId) await this.setCharacterTransition(characterId, transitionSelect.value);
+      }
     });
 
     this.panel.querySelector('[data-action="dim-mode"]').addEventListener("change", (event) => VisualNovelAPI.setDimMode(event.currentTarget.value));
@@ -2297,7 +2428,7 @@ class VisualNovelDirector {
             <span class="fvn-character__title"><strong>${VisualNovelAPI.escapeHtml(character.name)}</strong>${visible ? `<em><i class="fa-solid fa-circle"></i> ${game.i18n.localize("FVN.OnStage")}</em>` : ""}</span>
             <span>${Math.round(character.scale * 100)}% · X ${Math.round(x * 100)} · Y ${Math.round(y * 100)}</span>
           </button>
-          ${this.variantOptions(character)}
+          ${this.presetVariantControls(character)}
           <div class="fvn-character__actions">
             <button type="button" data-action="toggle" class="${visible ? "is-active" : ""}" title="${visible ? game.i18n.localize("FVN.Hide") : game.i18n.localize("FVN.Show")}"><i class="fa-solid ${visible ? "fa-eye-slash" : "fa-eye"}"></i></button>
             <button type="button" data-action="edit" title="${game.i18n.localize("FVN.Edit")}"><i class="fa-solid fa-pen"></i></button>
@@ -2612,6 +2743,27 @@ class VisualNovelDirector {
     return `<label class="fvn-variant-select"><i class="fa-solid fa-masks-theater"></i><select data-action="select-variant" title="${game.i18n.localize("FVN.SelectVariant")}">${options}</select></label>`;
   }
 
+
+  static transitionOptions(character) {
+    if (!Array.isArray(character?.variants) || !character.variants.length) return "";
+    const selected = ["none", "flip", "flame", "blur", "flash"].includes(character.variantTransition)
+      ? character.variantTransition
+      : "none";
+    const options = [
+      ["none", "FVN.TransitionNone"],
+      ["flip", "FVN.TransitionFlip"],
+      ["flame", "FVN.TransitionFlame"],
+      ["blur", "FVN.TransitionBlur"],
+      ["flash", "FVN.TransitionFlash"]
+    ].map(([value, key]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${game.i18n.localize(key)}</option>`).join("");
+    return `<label class="fvn-transition-select" title="${game.i18n.localize("FVN.VariantTransition")}"><i class="fa-solid fa-wand-magic-sparkles"></i><select data-action="select-variant-transition" aria-label="${game.i18n.localize("FVN.VariantTransition")}">${options}</select></label>`;
+  }
+
+  static presetVariantControls(character) {
+    if (!Array.isArray(character?.variants) || !character.variants.length) return "";
+    return `<div class="fvn-preset-variant-controls">${this.variantOptions(character)}${this.transitionOptions(character)}</div>`;
+  }
+
   static async setCharacterVariant(characterId, variantId) {
     const library = this.getLibrary();
     const index = library.findIndex((entry) => String(entry.id) === String(characterId));
@@ -2625,6 +2777,17 @@ class VisualNovelDirector {
       await this.renderCharacters();
       VisualNovelScenePalette.render();
     }
+  }
+
+
+  static async setCharacterTransition(characterId, transition) {
+    const allowed = ["none", "flip", "flame", "blur", "flash"];
+    const library = this.getLibrary();
+    const index = library.findIndex((entry) => String(entry.id) === String(characterId));
+    if (index < 0) return;
+    library[index].variantTransition = allowed.includes(transition) ? transition : "none";
+    await this.setLibrary(library);
+    await this.renderCharacters();
   }
 
   static closeEditor() {
