@@ -2985,3 +2985,141 @@ body.theme-light .fvn-stage,
 body.theme-light .fvn-scene-palette {
   color-scheme: dark;
 }
+
+
+/* v1.1.0 - Quick Access follows Foundry interface light theme */
+body.theme-light .fvn-scene-palette {
+  color-scheme: light;
+  color: #2f2a24;
+}
+
+body.theme-light .fvn-scene-palette__panel {
+  border-color: rgba(138, 104, 42, .38);
+  background: rgba(246, 243, 235, .96);
+  color: #2f2a24;
+  box-shadow: 0 10px 28px rgba(64, 48, 30, .24);
+}
+
+body.theme-light .fvn-scene-palette__header {
+  border-bottom-color: rgba(58, 51, 43, .14);
+  color: #5c4314;
+}
+
+body.theme-light .fvn-scene-palette__tabs,
+body.theme-light .fvn-scene-palette__controls {
+  border-bottom-color: rgba(58, 51, 43, .13);
+}
+
+body.theme-light .fvn-scene-palette__tabs button {
+  color: #5f564d;
+}
+
+body.theme-light .fvn-scene-palette__tabs button:hover {
+  background: rgba(58, 51, 43, .07);
+  color: #2b261f;
+}
+
+body.theme-light .fvn-scene-palette__tabs button.is-active,
+body.theme-light .fvn-scene-palette__tabs button.is-scene-bound {
+  border-color: rgba(138, 104, 42, .58);
+  background: rgba(138, 104, 42, .15);
+  color: #5c4314;
+}
+
+body.theme-light .fvn-scene-palette__tabs button.is-unbound {
+  border-color: rgba(58, 51, 43, .15);
+  background: rgba(58, 51, 43, .035);
+  color: #71675d;
+}
+
+body.theme-light .fvn-scene-palette__tabs button.is-unbound.is-active {
+  border-color: rgba(90, 101, 130, .42);
+  background: rgba(100, 115, 150, .12);
+  color: #3f4c70;
+}
+
+body.theme-light .fvn-scene-palette__portrait {
+  border-color: rgba(58, 51, 43, .16);
+  background: rgba(255, 255, 255, .50);
+  color: #302a23;
+}
+
+body.theme-light .fvn-scene-palette__portrait:hover {
+  border-color: rgba(138, 104, 42, .48);
+  background: rgba(138, 104, 42, .08);
+}
+
+body.theme-light .fvn-scene-palette__portrait.is-active {
+  border-color: rgba(138, 104, 42, .76);
+  background: rgba(138, 104, 42, .14);
+  box-shadow: inset 0 0 0 1px rgba(138, 104, 42, .12);
+}
+
+body.theme-light .fvn-scene-palette__portrait small {
+  color: #453e37;
+}
+
+body.theme-light .fvn-scene-palette .fvn-checkerboard {
+  background-color: #d8d2c8;
+  background-image:
+    linear-gradient(45deg, rgba(70, 62, 52, .08) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(70, 62, 52, .08) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(70, 62, 52, .08) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(70, 62, 52, .08) 75%);
+}
+
+body.theme-light .fvn-scene-palette select {
+  border-color: rgba(58, 51, 43, .24);
+  background: rgba(255, 255, 255, .76);
+  color: #302a23;
+}
+
+body.theme-light .fvn-scene-palette__focus,
+body.theme-light .fvn-scene-palette__silhouette,
+body.theme-light .fvn-scene-palette__all,
+body.theme-light .fvn-scene-palette__names,
+body.theme-light .fvn-scene-palette__dim {
+  border-color: rgba(58, 51, 43, .20);
+  background: rgba(255, 255, 255, .52);
+  color: #4b433b;
+}
+
+body.theme-light .fvn-scene-palette__focus:hover:not(:disabled),
+body.theme-light .fvn-scene-palette__silhouette:hover:not(:disabled),
+body.theme-light .fvn-scene-palette__all:hover:not(:disabled),
+body.theme-light .fvn-scene-palette__names:hover:not(:disabled) {
+  border-color: rgba(138, 104, 42, .48);
+  background: rgba(138, 104, 42, .10);
+  color: #3d2d12;
+}
+
+body.theme-light .fvn-scene-palette__focus.is-active,
+body.theme-light .fvn-scene-palette__silhouette.is-active,
+body.theme-light .fvn-scene-palette__names.is-active {
+  border-color: rgba(138, 104, 42, .68);
+  background: rgba(138, 104, 42, .17);
+  color: #3b2a0d;
+}
+
+body.theme-light .fvn-scene-palette__dim {
+  border-color: rgba(71, 91, 145, .36);
+  background: rgba(100, 125, 185, .10);
+  color: #35456f;
+}
+
+body.theme-light .fvn-scene-palette__dim:hover:not(:disabled),
+body.theme-light .fvn-scene-palette__dim.is-active {
+  border-color: rgba(71, 91, 145, .62);
+  background: rgba(100, 125, 185, .20);
+  color: #24355e;
+}
+
+body.theme-light .fvn-scene-palette__empty,
+body.theme-light .fvn-scene-palette__empty-tab {
+  color: #71675d;
+}
+
+/* Keep the round Quick Access launcher visually branded while making the panel theme-aware. */
+body.theme-light .fvn-scene-palette__toggle {
+  color-scheme: dark;
+}
