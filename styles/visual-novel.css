@@ -3422,3 +3422,35 @@ body.theme-light .fvn-scene-palette__spotlight.is-active {
   color: #176b9f;
   box-shadow: 0 0 0 2px rgba(74,168,230,.14), 0 2px 8px rgba(45,110,160,.16);
 }
+
+
+/* v1.1.0 - compact Quick Access portrait controls */
+.fvn-scene-palette__silhouette,
+.fvn-scene-palette__focus,
+.fvn-scene-palette__spotlight {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  font-size: 10px;
+}
+
+.fvn-scene-palette__silhouette {
+  left: 5px;
+  top: 5px;
+}
+
+.fvn-scene-palette__focus {
+  right: 5px;
+  top: 5px;
+}
+
+.fvn-scene-palette__spotlight {
+  top: 5px;
+}
+
+.fvn-scene-palette__silhouette i,
+.fvn-scene-palette__focus i,
+.fvn-scene-palette__spotlight i {
+  font-size: 10px;
+  line-height: 1;
+}
