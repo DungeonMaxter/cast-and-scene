@@ -3248,20 +3248,13 @@ body.theme-light .fvn-transition-select select {
   isolation: isolate;
 }
 
-.fvn-stage__portrait-wrap--visible.fvn-variant-transition--flash::after {
-  content: "";
-  position: absolute;
-  inset: -3%;
-  z-index: 8;
-  border-radius: 10px;
-  background: rgba(255,255,255,.82);
-  mix-blend-mode: screen;
-  pointer-events: none;
-  animation: fvn-variant-flash 300ms ease-out both;
-}
 
-@keyframes fvn-variant-flash {
-  0% { opacity: 0; transform: scale(.98); }
-  38% { opacity: .92; transform: scale(1.015); }
-  100% { opacity: 0; transform: scale(1.03); }
+
+/* v1.1.0 - transient transition filter definitions */
+.fvn-stage__effects {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
