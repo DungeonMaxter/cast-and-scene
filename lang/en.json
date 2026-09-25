@@ -208,7 +208,13 @@
     "TutorialQuickBody": "Use the floating palette during the session to show portraits, focus the camera, and control names or background effects.",
     "ReleaseSeenSetting": "Seen release version",
     "ReleaseNoticeDisabledSetting": "Disable release notes",
-    "TutorialCompletedSetting": "Tutorial completed"
+    "TutorialCompletedSetting": "Tutorial completed",
+    "VariantTransition": "Variant transition",
+    "TransitionNone": "Instant",
+    "TransitionFlip": "Flip",
+    "TransitionFlame": "Flame Warp",
+    "TransitionBlur": "Blur",
+    "TransitionFlash": "Flash"
   },
   "FVN.TutorialStartFailed": "The tutorial could not start. Close and reopen Cast & Scene, then try again.",
   "FVN.QuickAccess": "Quick Access",
