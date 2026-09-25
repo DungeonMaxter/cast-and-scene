@@ -2203,3 +2203,15 @@
 .fvn-director--editor-mode .fvn-variants-editor__list {
   min-height: 0;
 }
+
+
+/* v1.1.0 - keep variant rows compact when editor grows */
+.fvn-director--editor-mode .fvn-variants-editor {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+}
+
+.fvn-director--editor-mode .fvn-variants-editor__list {
+  align-content: start;
+  grid-auto-rows: max-content;
+}
