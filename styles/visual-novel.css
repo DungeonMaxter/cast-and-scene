@@ -2192,3 +2192,14 @@
     max-height: 170px;
   }
 }
+
+
+/* v1.1.0 - resizable character editor */
+.fvn-director--editor-mode .fvn-director__resize-handle {
+  display: block !important;
+  z-index: 10;
+}
+
+.fvn-director--editor-mode .fvn-variants-editor__list {
+  min-height: 0;
+}
