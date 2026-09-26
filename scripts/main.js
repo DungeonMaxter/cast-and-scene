@@ -3377,15 +3377,20 @@ class VisualNovelOnboarding {
   static releaseNotes() {
     return {
       features: [
-        game.i18n.localize("FVN.ReleaseFeatureArchitecture"),
-        game.i18n.localize("FVN.ReleaseFeaturePolish"),
-        game.i18n.localize("FVN.ReleaseFeatureOnboarding"),
-        game.i18n.localize("FVN.ReleaseFeatureDiagnostics")
+        game.i18n.localize("FVN.ReleaseFeatureQuickVariants"),
+        game.i18n.localize("FVN.ReleaseFeatureTransitions"),
+        game.i18n.localize("FVN.ReleaseFeatureSpotlight"),
+        game.i18n.localize("FVN.ReleaseFeatureQuickToolbar"),
+        game.i18n.localize("FVN.ReleaseFeatureLightTheme"),
+        game.i18n.localize("FVN.ReleaseFeatureResponsive"),
+        game.i18n.localize("FVN.ReleaseFeatureVariantEditor")
       ],
       fixes: [
-        game.i18n.localize("FVN.ReleaseFixLayout"),
-        game.i18n.localize("FVN.ReleaseFixConsistency"),
-        game.i18n.localize("FVN.ReleaseFixMaintenance")
+        game.i18n.localize("FVN.ReleaseFixPersistence"),
+        game.i18n.localize("FVN.ReleaseFixContrast"),
+        game.i18n.localize("FVN.ReleaseFixQuickAccess"),
+        game.i18n.localize("FVN.ReleaseFixScenePreset"),
+        game.i18n.localize("FVN.ReleaseFixPolish")
       ]
     };
   }
