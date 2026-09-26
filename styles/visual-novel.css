@@ -4133,3 +4133,58 @@ body.theme-light .fvn-scene-palette__variant-slot.is-empty {
   border-style: solid;
   box-shadow: none;
 }
+
+
+/* v1.1.0 - Quick Access scrollbars use neutral theme-aware tones */
+.fvn-scene-palette__tabs,
+.fvn-scene-palette__portraits {
+  scrollbar-color: rgba(132,132,132,.78) rgba(255,255,255,.045) !important;
+  scrollbar-width: thin;
+}
+
+.fvn-scene-palette__tabs::-webkit-scrollbar,
+.fvn-scene-palette__portraits::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.fvn-scene-palette__tabs::-webkit-scrollbar-track,
+.fvn-scene-palette__portraits::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.045) !important;
+}
+
+.fvn-scene-palette__tabs::-webkit-scrollbar-thumb,
+.fvn-scene-palette__portraits::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(132,132,132,.78) !important;
+  background-clip: padding-box !important;
+}
+
+.fvn-scene-palette__tabs::-webkit-scrollbar-thumb:hover,
+.fvn-scene-palette__portraits::-webkit-scrollbar-thumb:hover {
+  background: rgba(158,158,158,.92) !important;
+  background-clip: padding-box !important;
+}
+
+body.theme-light .fvn-scene-palette__tabs,
+body.theme-light .fvn-scene-palette__portraits {
+  scrollbar-color: rgba(105,101,96,.66) rgba(58,51,43,.055) !important;
+}
+
+body.theme-light .fvn-scene-palette__tabs::-webkit-scrollbar-track,
+body.theme-light .fvn-scene-palette__portraits::-webkit-scrollbar-track {
+  background: rgba(58,51,43,.055) !important;
+}
+
+body.theme-light .fvn-scene-palette__tabs::-webkit-scrollbar-thumb,
+body.theme-light .fvn-scene-palette__portraits::-webkit-scrollbar-thumb {
+  background: rgba(105,101,96,.66) !important;
+  background-clip: padding-box !important;
+}
+
+body.theme-light .fvn-scene-palette__tabs::-webkit-scrollbar-thumb:hover,
+body.theme-light .fvn-scene-palette__portraits::-webkit-scrollbar-thumb:hover {
+  background: rgba(84,80,76,.82) !important;
+  background-clip: padding-box !important;
+}
