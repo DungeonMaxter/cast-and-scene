@@ -1,6 +1,6 @@
 # Cast & Scene
 
-**Version 1.0.0**\
+**Version 1.1.0**\
 **Author:** Dungeon Maxter\
 **Compatibility:** Foundry Virtual Tabletop v14\
 **System:** System agnostic\
@@ -28,7 +28,12 @@ Silhouette, Performance Monitor, and scene-linked presets.
 -   **Scene Presets** for scene casts, positions, scale, layer order,
     and camera framing.
 -   **Quick Access** for live portrait control without keeping the
-    Director open.
+    Director open, including up to six selected Quick Variants per
+    Scene Preset character.
+-   **Spotlight** for temporarily emphasizing one visible character
+    without changing the saved Scene Preset layout.
+-   **Variant transitions** including Instant, Flip, Dissolve, Blur and
+    Flash.
 -   **Camera Focus** with per-character Zoom Frames, animated framing,
     and Home View reset.
 -   **Background effects** including Dim, Blur, and Focus (Dim + Blur),
