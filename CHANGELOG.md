@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.1.0 - Spotlight, Quick Variants and Variant Transitions
+
+### Quick Variants
+- Character Pool entries can keep any number of image variants.
+- Each character copy inside a Scene Preset can expose up to six selected Quick Variants.
+- Main can be selected as a Quick Variant alongside alternate images.
+- Scene Preset Variant picker combines active-image selection with Quick Variant selection.
+- Quick Access displays the six fixed slots in a compact 2x3 layout with thumbnails, tooltips and active-state highlighting.
+
+### Variant transitions
+- Per-character Variant Transition setting in Scene Presets.
+- Available transitions: Instant, Flip, Dissolve, Blur and Flash.
+- Quick Access variant changes use the transition configured for that Scene Preset character.
+
+### Spotlight
+- New Spotlight control in Quick Access.
+- Spotlight temporarily emphasizes one visible character while dimming and slightly receding the others.
+- Clicking the active character again restores the normal presentation.
+- Spotlight changes do not modify saved Scene Preset position, scale or layer data.
+
+### Interface and usability
+- Quick Access portrait controls moved into a compact toolbar below each portrait.
+- Director and Quick Access improved for Foundry light and dark interface themes.
+- Responsive Scene Preset cards, footer controls and performance information refined for smaller viewports.
+- Character Variant editor supports internal scrolling, resizing, remembered size and improved Add Variant focus behavior.
+- Quick Access scrolling and empty Quick Variant slot contrast refined for both themes.
+
+### Reliability
+- Quick Variant selections persist with each Scene Preset character copy.
+- Variant transitions, Spotlight, Silhouette and Camera Focus remain compatible with shared Stage synchronization.
+- Existing Character Pool and Scene Preset data remain compatible with the 1.1 data model.
+
 ## 1.0.0 - Initial Public Release
 
 ### Core
