@@ -4008,3 +4008,114 @@ body.theme-light .fvn-scene-palette__variant-slot.is-empty {
   border-color: rgba(58,51,43,.30);
   background: rgba(58,51,43,.055);
 }
+
+
+/* v1.1.0 - release polish: neutral scrollbars and clearer empty Quick Variant slots */
+.fvn-director,
+.fvn-scene-palette,
+.fvn-variant-picker__menu,
+.fvn-tabs,
+.fvn-director__content,
+.fvn-editor__scroll,
+.fvn-scene-palette__portraits {
+  scrollbar-color: rgba(122, 54, 66, .82) rgba(255,255,255,.05);
+}
+
+.fvn-director::-webkit-scrollbar,
+.fvn-scene-palette::-webkit-scrollbar,
+.fvn-variant-picker__menu::-webkit-scrollbar,
+.fvn-tabs::-webkit-scrollbar,
+.fvn-director__content::-webkit-scrollbar,
+.fvn-editor__scroll::-webkit-scrollbar,
+.fvn-scene-palette__portraits::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.fvn-director::-webkit-scrollbar-track,
+.fvn-scene-palette::-webkit-scrollbar-track,
+.fvn-variant-picker__menu::-webkit-scrollbar-track,
+.fvn-tabs::-webkit-scrollbar-track,
+.fvn-director__content::-webkit-scrollbar-track,
+.fvn-editor__scroll::-webkit-scrollbar-track,
+.fvn-scene-palette__portraits::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.04);
+}
+
+.fvn-director::-webkit-scrollbar-thumb,
+.fvn-scene-palette::-webkit-scrollbar-thumb,
+.fvn-variant-picker__menu::-webkit-scrollbar-thumb,
+.fvn-tabs::-webkit-scrollbar-thumb,
+.fvn-director__content::-webkit-scrollbar-thumb,
+.fvn-editor__scroll::-webkit-scrollbar-thumb,
+.fvn-scene-palette__portraits::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(122,54,66,.82);
+  background-clip: padding-box;
+}
+
+.fvn-director::-webkit-scrollbar-thumb:hover,
+.fvn-scene-palette::-webkit-scrollbar-thumb:hover,
+.fvn-variant-picker__menu::-webkit-scrollbar-thumb:hover,
+.fvn-tabs::-webkit-scrollbar-thumb:hover,
+.fvn-director__content::-webkit-scrollbar-thumb:hover,
+.fvn-editor__scroll::-webkit-scrollbar-thumb:hover,
+.fvn-scene-palette__portraits::-webkit-scrollbar-thumb:hover {
+  background: rgba(145,66,80,.96);
+  background-clip: padding-box;
+}
+
+.fvn-scene-palette__variant-slot.is-empty {
+  opacity: .58;
+  border-color: rgba(185,177,166,.44);
+  background: rgba(185,177,166,.13);
+}
+
+body.theme-light .fvn-director,
+body.theme-light .fvn-scene-palette,
+body.theme-light .fvn-variant-picker__menu,
+body.theme-light .fvn-tabs,
+body.theme-light .fvn-director__content,
+body.theme-light .fvn-editor__scroll,
+body.theme-light .fvn-scene-palette__portraits {
+  scrollbar-color: rgba(120, 82, 74, .72) rgba(58,51,43,.06);
+}
+
+body.theme-light .fvn-director::-webkit-scrollbar-track,
+body.theme-light .fvn-scene-palette::-webkit-scrollbar-track,
+body.theme-light .fvn-variant-picker__menu::-webkit-scrollbar-track,
+body.theme-light .fvn-tabs::-webkit-scrollbar-track,
+body.theme-light .fvn-director__content::-webkit-scrollbar-track,
+body.theme-light .fvn-editor__scroll::-webkit-scrollbar-track,
+body.theme-light .fvn-scene-palette__portraits::-webkit-scrollbar-track {
+  background: rgba(58,51,43,.055);
+}
+
+body.theme-light .fvn-director::-webkit-scrollbar-thumb,
+body.theme-light .fvn-scene-palette::-webkit-scrollbar-thumb,
+body.theme-light .fvn-variant-picker__menu::-webkit-scrollbar-thumb,
+body.theme-light .fvn-tabs::-webkit-scrollbar-thumb,
+body.theme-light .fvn-director__content::-webkit-scrollbar-thumb,
+body.theme-light .fvn-editor__scroll::-webkit-scrollbar-thumb,
+body.theme-light .fvn-scene-palette__portraits::-webkit-scrollbar-thumb {
+  background: rgba(120,82,74,.72);
+  background-clip: padding-box;
+}
+
+body.theme-light .fvn-director::-webkit-scrollbar-thumb:hover,
+body.theme-light .fvn-scene-palette::-webkit-scrollbar-thumb:hover,
+body.theme-light .fvn-variant-picker__menu::-webkit-scrollbar-thumb:hover,
+body.theme-light .fvn-tabs::-webkit-scrollbar-thumb:hover,
+body.theme-light .fvn-director__content::-webkit-scrollbar-thumb:hover,
+body.theme-light .fvn-editor__scroll::-webkit-scrollbar-thumb:hover,
+body.theme-light .fvn-scene-palette__portraits::-webkit-scrollbar-thumb:hover {
+  background: rgba(102,68,61,.88);
+  background-clip: padding-box;
+}
+
+body.theme-light .fvn-scene-palette__variant-slot.is-empty {
+  opacity: .72;
+  border-color: rgba(82,74,66,.34);
+  background: rgba(82,74,66,.09);
+}
