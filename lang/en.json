@@ -226,5 +226,17 @@
   "FVN.QuickAccess": "Quick Access",
   "FVN.BoundToCurrentScene": "Linked to current scene",
   "FVN.NoScenePresets": "No scene presets available",
-  "FVN.Silhouette": "Silhouette"
+  "FVN.Silhouette": "Silhouette",
+  "FVN.ReleaseFeatureQuickVariants": "Quick Variants: keep any number of character variants in the Character Pool, then choose up to six per Scene Preset for direct access during play.",
+  "FVN.ReleaseFeatureTransitions": "Variant Transitions: character image changes can now use Instant, Flip, Dissolve, Blur, or Flash, configured per Scene Preset character.",
+  "FVN.ReleaseFeatureSpotlight": "Spotlight: temporarily bring one visible character forward while dimming and slightly receding the others, without altering the saved preset layout.",
+  "FVN.ReleaseFeatureQuickToolbar": "Quick Access controls have been reorganized into a compact toolbar below each portrait for Silhouette, Spotlight, and Camera Focus.",
+  "FVN.ReleaseFeatureLightTheme": "Light Theme support: Director, Quick Access, active states, controls, and the Variant picker now adapt more consistently to Foundry's interface theme.",
+  "FVN.ReleaseFeatureResponsive": "Responsive interface improvements make Scene Preset cards, Stage controls, footer areas, and performance information adapt better to smaller windows.",
+  "FVN.ReleaseFeatureVariantEditor": "The Variant Editor now supports internal scrolling, resizing, remembered dimensions, more compact rows, and improved Add Variant focus and navigation.",
+  "FVN.ReleaseFixPersistence": "Quick Variant selections, active variants, transitions, Spotlight, Silhouette, and Camera Focus preserve their intended state through normal refresh and Stage synchronization.",
+  "FVN.ReleaseFixContrast": "Improved contrast for active controls, Reset Camera, empty Quick Variant slots, and other light-theme interface elements.",
+  "FVN.ReleaseFixQuickAccess": "Quick Access received clearer Quick Variant slots, improved portrait-card rhythm, and neutral theme-aware scrollbars.",
+  "FVN.ReleaseFixScenePreset": "Scene Preset Variant selection now combines active-image choice with up to six Quick Variant selections while keeping all Character Pool variants available.",
+  "FVN.ReleaseFixPolish": "Additional UI polish includes compact performance presentation, cleaner spacing, refined responsive behavior, and multiple small consistency fixes."
 }
