@@ -16,7 +16,7 @@ const PATREON_URL = "https://www.patreon.com/cw/DungeonMaxter";
 const DATA_SCHEMA_VERSION_SETTING = "dataSchemaVersion";
 const LEGACY_NAMESPACE_MIGRATED_SETTING = "legacyNamespaceMigrated";
 const DATA_SCHEMA_VERSION = 1;
-const CURRENT_VERSION = "1.0.0";
+const CURRENT_VERSION = "1.1.0";
 
 const DEFAULT_CHARACTER = {
   id: null,
