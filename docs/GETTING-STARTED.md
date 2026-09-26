@@ -67,6 +67,14 @@ This gives you a quick way to change how a character appears during a
 scene while keeping all of their visual states organized in a single
 Character Pool entry.
 
+There is no six-image limit in the Character Pool. A character can keep
+as many variants as you need.
+
+When that character is copied into a Scene Preset, its Variant picker
+lets you mark up to six images as **Quick Variants**. These are the
+images that will be exposed directly in Quick Access during play. The
+Main image can also occupy one of those six Quick Variant slots.
+
 ### Image Performance
 
 Cast & Scene is a visual module, so image size matters. Large character
@@ -175,7 +183,18 @@ available, but scene-linked presets are prioritized.
 
 Quick Access also gives you immediate control over frequently used
 presentation features, including character visibility, character names,
-Camera Focus, Camera Reset and Silhouette.
+Quick Variants, Spotlight, Camera Focus, Camera Reset and Silhouette.
+
+Each Scene Preset character always displays six Quick Variant positions
+in Quick Access. Assigned slots show their image thumbnail and name on
+hover; empty slots remain visually subdued. Clicking an assigned slot
+changes the character image immediately and uses the Variant Transition
+configured in the Scene Preset.
+
+**Spotlight** can temporarily bring one visible character forward while
+dimming the other visible portraits. Clicking Spotlight again restores
+the normal presentation, and switching Spotlight to another character
+moves the emphasis without changing the saved Scene Preset layout.
 
 The intended workflow is therefore:
 
@@ -318,12 +337,12 @@ Camera Focus uses normalized positioning and adapts independently to
 each client's viewport, but the apparent spacing between portraits can
 still vary.
 
-This is a known limitation of Cast & Scene 1.0.0 and does not affect
+This is a known limitation of Cast & Scene 1.1.0 and does not affect
 saved Character Pool or Scene Preset data.
 
 ## Community and Support
 
-Cast & Scene 1.0.0 is free to use.
+Cast & Scene 1.1.0 is free to use.
 
 If you would like to follow development, future modules and updates, you
 can join the Dungeon Maxter community on Patreon.

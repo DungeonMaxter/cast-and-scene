@@ -16,7 +16,7 @@ const PATREON_URL = "https://www.patreon.com/cw/DungeonMaxter";
 const DATA_SCHEMA_VERSION_SETTING = "dataSchemaVersion";
 const LEGACY_NAMESPACE_MIGRATED_SETTING = "legacyNamespaceMigrated";
 const DATA_SCHEMA_VERSION = 1;
-const CURRENT_VERSION = "1.0.0";
+const CURRENT_VERSION = "1.1.0";
 
 const DEFAULT_CHARACTER = {
   id: null,
@@ -30,6 +30,8 @@ const DEFAULT_CHARACTER = {
   tabId: null,
   variants: [],
   activeVariantId: null,
+  variantTransition: "none",
+  quickVariantIds: [],
   focusX: 0.5,
   focusY: 0.28,
   focusZoom: 1.65,
@@ -45,6 +47,7 @@ const DEFAULT_STAGE_STATE = {
   backgroundEffect: "dim",
   backgroundIntensity: "medium",
   namesVisible: true,
+  spotlightCharacterId: null,
   camera: { enabled: false, x: 0, y: 0, zoom: 1, targetPortraitId: null, focusX: 0.5, focusY: 0.28, framing: 1.65 }
 };
 
@@ -231,6 +234,15 @@ class VisualNovelStage {
     if (!character.variants.some((variant) => String(variant.id) === String(character.activeVariantId))) {
       character.activeVariantId = null;
     }
+    if (character.variantTransition === "flame") character.variantTransition = "dissolve";
+    character.variantTransition = ["none", "flip", "dissolve", "blur", "flash"].includes(character.variantTransition)
+      ? character.variantTransition
+      : "none";
+    const validQuickVariantIds = new Set(["__main__", ...character.variants.map((variant) => String(variant.id))]);
+    character.quickVariantIds = Array.isArray(character.quickVariantIds)
+      ? character.quickVariantIds.slice(0, 6).map((value) => validQuickVariantIds.has(String(value)) ? String(value) : null)
+      : [];
+    while (character.quickVariantIds.length < 6) character.quickVariantIds.push(null);
     character.focusX = Math.min(1, Math.max(0, Number(character.focusX) || 0.5));
     character.focusY = Math.min(1, Math.max(0, Number(character.focusY) || 0.28));
     character.focusZoom = Math.min(3.3333, Math.max(0.8, Number(character.focusZoom) || 1.65));
@@ -248,6 +260,7 @@ class VisualNovelStage {
         backgroundEffect: ["none", "dim", "blur", "focus"].includes(raw.backgroundEffect) ? raw.backgroundEffect : "dim",
         backgroundIntensity: ["small", "medium", "large"].includes(raw.backgroundIntensity) ? raw.backgroundIntensity : (raw.dimFeather === "large" ? "large" : "medium"),
         namesVisible: raw.namesVisible !== false,
+        spotlightCharacterId: raw.spotlightCharacterId ? String(raw.spotlightCharacterId) : null,
         camera: this.normalizeCamera(raw.camera)
       };
     }
@@ -263,6 +276,7 @@ class VisualNovelStage {
         backgroundEffect: DEFAULT_STAGE_STATE.backgroundEffect,
         backgroundIntensity: DEFAULT_STAGE_STATE.backgroundIntensity,
         namesVisible: DEFAULT_STAGE_STATE.namesVisible,
+        spotlightCharacterId: null,
         camera: foundry.utils.deepClone(DEFAULT_STAGE_STATE.camera)
       };
     }
@@ -352,6 +366,124 @@ class VisualNovelStage {
     return wrap;
   }
 
+  static runVariantTransition(wrap, portrait, silhouetteOverlay, nextSrc, transition, mirror = false) {
+    const previousSrc = portrait.getAttribute("src") || "";
+    if (!nextSrc || previousSrc === nextSrc || !previousSrc || transition === "none") {
+      portrait.src = nextSrc;
+      if (silhouetteOverlay) silhouetteOverlay.src = nextSrc;
+      return;
+    }
+
+    if (wrap._fvnVariantTransition?.cancel) wrap._fvnVariantTransition.cancel();
+
+    const baseTransform = `scaleX(${mirror ? -1 : 1})`;
+    let cancelled = false;
+    const timers = [];
+    const animations = [];
+    const later = (fn, delay) => {
+      const id = window.setTimeout(() => { if (!cancelled) fn(); }, delay);
+      timers.push(id);
+    };
+    const animate = (element, keyframes, options) => {
+      const animation = element?.animate?.(keyframes, options);
+      if (animation) animations.push(animation);
+      return animation;
+    };
+    const swap = () => {
+      portrait.src = nextSrc;
+      if (silhouetteOverlay) silhouetteOverlay.src = nextSrc;
+    };
+    const cleanup = () => {
+      wrap.classList.remove("fvn-variant-transition--flash");
+      portrait.style.removeProperty("filter");
+      portrait.style.removeProperty("opacity");
+      portrait.style.removeProperty("clip-path");
+      portrait.style.transform = baseTransform;
+      portrait.style.removeProperty("transform-origin");
+      wrap._fvnVariantTransition = null;
+    };
+
+    wrap._fvnVariantTransition = {
+      cancel: () => {
+        cancelled = true;
+        timers.forEach((id) => clearTimeout(id));
+        animations.forEach((animation) => animation.cancel());
+        swap();
+        cleanup();
+      }
+    };
+
+    if (transition === "flip") {
+      portrait.style.transformOrigin = "50% 50%";
+      animate(portrait,
+        [{ transform: `${baseTransform} perspective(700px) rotateY(0deg)` }, { transform: `${baseTransform} perspective(700px) rotateY(90deg)` }],
+        { duration: 190, easing: "ease-in", fill: "forwards" });
+      later(() => {
+        swap();
+        animate(portrait,
+          [{ transform: `${baseTransform} perspective(700px) rotateY(-90deg)` }, { transform: `${baseTransform} perspective(700px) rotateY(0deg)` }],
+          { duration: 220, easing: "ease-out", fill: "forwards" });
+      }, 190);
+      later(cleanup, 430);
+      return;
+    }
+
+    if (transition === "blur") {
+      animate(portrait,
+        [{ opacity: 1, filter: "blur(0px)" }, { opacity: .18, filter: "blur(9px)" }],
+        { duration: 360, easing: "ease-in", fill: "forwards" });
+      later(() => {
+        swap();
+        animate(portrait,
+          [{ opacity: .18, filter: "blur(9px)" }, { opacity: 1, filter: "blur(0px)" }],
+          { duration: 520, easing: "ease-out", fill: "forwards" });
+      }, 360);
+      later(cleanup, 900);
+      return;
+    }
+
+    if (transition === "flash") {
+      animate(portrait,
+        [
+          { filter: "brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))" },
+          { filter: "brightness(2.7) drop-shadow(0 0 12px rgba(255,255,255,.95))" }
+        ],
+        { duration: 125, easing: "ease-in", fill: "forwards" });
+      later(swap, 115);
+      later(() => animate(portrait,
+        [
+          { filter: "brightness(2.7) drop-shadow(0 0 12px rgba(255,255,255,.95))" },
+          { filter: "brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))" }
+        ],
+        { duration: 215, easing: "ease-out", fill: "forwards" }), 125);
+      later(cleanup, 355);
+      return;
+    }
+
+    if (transition === "dissolve") {
+      animate(portrait,
+        [
+          { opacity: 1 },
+          { opacity: 0 }
+        ],
+        { duration: 360, easing: "ease-in-out", fill: "forwards" });
+      later(() => {
+        swap();
+        animate(portrait,
+          [
+            { opacity: 0 },
+            { opacity: 1 }
+          ],
+          { duration: 420, easing: "ease-in-out", fill: "forwards" });
+      }, 350);
+      later(cleanup, 790);
+      return;
+    }
+
+    swap();
+    cleanup();
+  }
+
   static renderPortrait(payload = {}, { preview = false } = {}) {
     const character = this.normalizeCharacter(payload);
     const id = preview ? this.previewId : character.id;
@@ -384,14 +516,25 @@ class VisualNovelStage {
     }
 
     if (character.image) {
-      portrait.src = character.image;
-      if (silhouetteOverlay) silhouetteOverlay.src = character.image;
+      if (!preview) {
+        this.runVariantTransition(
+          wrap,
+          portrait,
+          silhouetteOverlay,
+          character.image,
+          character.variantTransition ?? "none",
+          Boolean(character.mirror)
+        );
+      } else {
+        portrait.src = character.image;
+        if (silhouetteOverlay) silhouetteOverlay.src = character.image;
+      }
     } else {
       portrait.removeAttribute("src");
       silhouetteOverlay?.removeAttribute("src");
     }
     portrait.alt = character.name || game.i18n.localize("FVN.UnknownCharacter");
-    portrait.style.transform = `scaleX(${character.mirror ? -1 : 1})`;
+    if (!wrap._fvnVariantTransition) portrait.style.transform = `scaleX(${character.mirror ? -1 : 1})`;
     if (silhouetteOverlay) silhouetteOverlay.style.transform = `scaleX(${character.mirror ? -1 : 1})`;
 
     requestAnimationFrame(() => wrap.classList.add("fvn-stage__portrait-wrap--visible"));
@@ -470,10 +613,21 @@ class VisualNovelStage {
       wrap._fvnRemovalTimeout = window.setTimeout(() => wrap.remove(), 280);
     }
 
+    const spotlightId = state.spotlightCharacterId ? String(state.spotlightCharacterId) : null;
+    const spotlightVisible = spotlightId
+      ? state.portraits.some((portrait) => String(portrait.characterId ?? portrait.id) === spotlightId)
+      : false;
+
+    stage.classList.toggle("fvn-stage--spotlight-active", spotlightVisible);
+
     const total = state.portraits.length;
     state.portraits.forEach((portrait, index) => {
       const rendered = { ...portrait, layer: total - index };
       const wrap = this.renderPortrait(rendered);
+      const isSpotlight = spotlightVisible && String(portrait.characterId ?? portrait.id) === spotlightId;
+      wrap.classList.toggle("fvn-stage__portrait-wrap--spotlight", isSpotlight);
+      wrap.classList.toggle("fvn-stage__portrait-wrap--spotlight-dimmed", spotlightVisible && !isSpotlight);
+      if (isSpotlight) wrap.style.zIndex = String(total + 100);
       this.renderNameplate(rendered, { visible: state.namesVisible });
       if (camera.enabled && String(camera.targetPortraitId) === String(portrait.id)) {
         const image = wrap?.querySelector('.fvn-stage__portrait');
@@ -831,6 +985,18 @@ class VisualNovelScenePalette {
         if (id) await VisualNovelAPI.toggleSilhouette(id);
         this.render();
       }
+      if (action === "toggle-palette-spotlight") {
+        const id = event.target.closest("[data-character-id]")?.dataset.characterId;
+        if (id) await VisualNovelAPI.toggleSpotlight(id);
+        this.render();
+      }
+      if (action === "select-quick-variant") {
+        const card = event.target.closest("[data-character-id]");
+        const button = event.target.closest("[data-variant-id]");
+        const id = card?.dataset.characterId;
+        if (id && button) await VisualNovelDirector.setCharacterVariant(id, button.dataset.variantId || null);
+        this.render();
+      }
     });
     this.root.addEventListener("contextmenu", (event) => this.openContextMenu(event));
     return this.root;
@@ -983,7 +1149,11 @@ class VisualNovelScenePalette {
     }
     const camera = VisualNovelStage.normalizeCamera(state.camera);
     const resetCameraButton = root.querySelector('[data-action="reset-palette-camera"]');
-    if (resetCameraButton) resetCameraButton.disabled = !camera.enabled && camera.x === 0 && camera.y === 0 && camera.zoom === 1;
+    if (resetCameraButton) {
+      const cameraIsHome = !camera.enabled && camera.x === 0 && camera.y === 0 && camera.zoom === 1;
+      resetCameraButton.disabled = cameraIsHome;
+      resetCameraButton.hidden = cameraIsHome;
+    }
     const allButton = root.querySelector('[data-action="toggle-palette-all"]');
     if (allButton) {
       const hasVisible = state.portraits.length > 0;
@@ -1007,11 +1177,14 @@ class VisualNovelScenePalette {
       return `<div class="fvn-scene-palette__item" data-character-id="${character.id}">
         <button type="button" data-action="toggle-palette-character" class="fvn-scene-palette__portrait ${active ? "is-active" : ""}" title="${VisualNovelAPI.escapeHtml(character.name)}">
           <span class="fvn-checkerboard"><img src="${VisualNovelDirector.getDisplayImage(character)}" alt="${VisualNovelAPI.escapeHtml(character.name)}" /></span>
-          <small>${VisualNovelAPI.escapeHtml(character.name)}</small>
         </button>
-        <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
-        <button type="button" data-action="toggle-palette-silhouette" class="fvn-scene-palette__silhouette ${Boolean(character.silhouette) ? "is-active" : ""}" title="${game.i18n.localize("FVN.Silhouette")}"><i class="fa-solid fa-user-secret"></i></button>
-        ${VisualNovelDirector.variantOptions(character)}
+        <div class="fvn-scene-palette__portrait-tools" role="group" aria-label="${VisualNovelAPI.escapeHtml(character.name)}">
+          <button type="button" data-action="toggle-palette-silhouette" class="fvn-scene-palette__silhouette ${Boolean(character.silhouette) ? "is-active" : ""}" title="${game.i18n.localize("FVN.Silhouette")}"><i class="fa-solid fa-user-secret"></i></button>
+          <button type="button" data-action="toggle-palette-spotlight" class="fvn-scene-palette__spotlight ${state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "FVN.RestoreSpotlight" : "FVN.Spotlight")}" ${active ? "" : "disabled"}><i class="fa-solid fa-lightbulb"></i></button>
+          <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
+        </div>
+        ${VisualNovelDirector.quickVariantSlots(character)}
+        <small class="fvn-scene-palette__portrait-name">${VisualNovelAPI.escapeHtml(character.name)}</small>
       </div>`;
     }).join("") : `<div class="fvn-scene-palette__empty">${game.i18n.localize("FVN.EmptyLibrary")}</div>`;
     VisualNovelStage.scheduleSafeAreaUpdate();
@@ -1116,6 +1289,7 @@ class VisualNovelDirector {
         </section>
 
         <form class="fvn-editor fvn-editor--hidden" data-region="editor">
+          <div class="fvn-editor__scroll">
           <h3 data-region="editor-title">${game.i18n.localize("FVN.NewCharacter")}</h3>
 
           <label>
@@ -1176,6 +1350,7 @@ class VisualNovelDirector {
             <input type="hidden" name="y" value="1" />
           </div>
 
+          </div>
           <div class="fvn-editor__actions">
             <button type="submit"><i class="fa-solid fa-floppy-disk"></i> ${game.i18n.localize("FVN.Save")}</button>
             <button type="button" data-action="cancel-edit">${game.i18n.localize("FVN.Cancel")}</button>
@@ -1185,16 +1360,6 @@ class VisualNovelDirector {
       </div>
 
       <footer class="fvn-director__footer">
-        <section class="fvn-preset-performance" data-region="preset-performance">
-          <div class="fvn-preset-performance__heading">
-            <span><i class="fa-solid fa-gauge-high"></i> ${game.i18n.localize("FVN.PresetLoad")}</span>
-            <strong data-region="performance-label">${game.i18n.localize("FVN.PerformanceCalculating")}</strong>
-          </div>
-          <div class="fvn-performance-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <span data-region="performance-fill"></span>
-          </div>
-          <div class="fvn-preset-performance__summary" data-region="performance-summary"></div>
-        </section>
         <section class="fvn-footer-group fvn-footer-group--stage">
           <div class="fvn-footer-group__title"><i class="fa-solid fa-clapperboard"></i> ${game.i18n.localize("FVN.Stage")}</div>
           <div class="fvn-background-controls">
@@ -1231,10 +1396,22 @@ class VisualNovelDirector {
             <button type="button" data-action="toggle-all" class="fvn-danger"><i class="fa-solid fa-eye-slash"></i> <span>${game.i18n.localize("FVN.HideAll")}</span></button>
           </div>
         </section>
-        <div class="fvn-preset-status" data-region="preset-status" data-level="green">
-          <i class="fa-solid fa-circle-info"></i>
-          <span>${game.i18n.localize("FVN.PerformanceCalculating")}</span>
-        </div>
+        <section class="fvn-performance-strip">
+          <div class="fvn-preset-performance" data-region="preset-performance">
+            <div class="fvn-preset-performance__heading">
+              <span><i class="fa-solid fa-gauge-high"></i> ${game.i18n.localize("FVN.PresetLoad")}</span>
+              <strong data-region="performance-label">${game.i18n.localize("FVN.PerformanceCalculating")}</strong>
+            </div>
+            <div class="fvn-performance-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span data-region="performance-fill"></span>
+            </div>
+            <div class="fvn-preset-performance__summary" data-region="performance-summary"></div>
+          </div>
+          <div class="fvn-preset-status" data-region="preset-status" data-level="green">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>${game.i18n.localize("FVN.PerformanceCalculating")}</span>
+          </div>
+        </section>
       </footer>
       <div class="fvn-director__resize-handle" data-role="resize-handle" aria-hidden="true"></div>
     `;
@@ -1289,6 +1466,21 @@ class VisualNovelDirector {
         case "add-variant": this.addVariantRow(); break;
         case "browse-variant": this.browseVariantImage(button.closest("[data-variant-row]")); break;
         case "delete-variant": button.closest("[data-variant-row]")?.remove(); break;
+        case "toggle-variant-picker": {
+          const picker = button.closest(".fvn-variant-picker");
+          const menu = picker?.querySelector(".fvn-variant-picker__menu");
+          if (!menu) break;
+          const opening = menu.hidden;
+          this.closeVariantPickers(picker);
+          menu.hidden = !opening;
+          button.setAttribute("aria-expanded", String(opening));
+          break;
+        }
+        case "select-variant": {
+          const variantId = button.dataset.variantId || null;
+          if (characterId) await this.setCharacterVariant(characterId, variantId);
+          break;
+        }
         case "toggle": await this.toggleCharacter(characterId); break;
         case "filter-visible": this.toggleVisibleFilter(); break;
         case "toggle-dim": await VisualNovelAPI.toggleDim(); break;
@@ -1314,11 +1506,15 @@ class VisualNovelDirector {
     this.panel.addEventListener("contextmenu", (event) => this.openContextMenu(event));
     window.addEventListener("pointerdown", (event) => {
       if (!event.target.closest(".fvn-context-menu")) this.closeContextMenu();
+      if (!event.target.closest(".fvn-variant-picker")) this.closeVariantPickers();
     }, true);
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") this.closeContextMenu();
     });
-    window.addEventListener("resize", () => this.closeContextMenu());
+    window.addEventListener("resize", () => {
+      this.closeContextMenu();
+      this.fitPanelToViewport();
+    });
 
     this.panel.querySelector("[data-field='search']").addEventListener("input", () => this.renderCharacters());
     this.panel.querySelector("[data-field='pool-search']").addEventListener("input", () => this.renderPoolPicker());
@@ -1333,10 +1529,21 @@ class VisualNovelDirector {
     editor.addEventListener("change", () => this.updateScenePreview());
 
     this.panel.addEventListener("change", async (event) => {
-      const select = event.target.closest("[data-action='select-variant']");
-      if (!select) return;
-      const characterId = select.closest("[data-character-id]")?.dataset.characterId;
-      if (characterId) await this.setCharacterVariant(characterId, select.value || null);
+      const quickVariantToggle = event.target.closest("[data-quick-variant-id]");
+      if (quickVariantToggle) {
+        const characterId = quickVariantToggle.closest("[data-character-id]")?.dataset.characterId;
+        if (characterId) {
+          const ok = await this.setQuickVariantSelected(characterId, quickVariantToggle.dataset.quickVariantId, quickVariantToggle.checked);
+          if (!ok) quickVariantToggle.checked = false;
+          this.syncVariantPickerQuickState(characterId);
+        }
+        return;
+      }
+      const transitionSelect = event.target.closest("[data-action='select-variant-transition']");
+      if (transitionSelect) {
+        const characterId = transitionSelect.closest("[data-character-id]")?.dataset.characterId;
+        if (characterId) await this.setCharacterTransition(characterId, transitionSelect.value);
+      }
     });
 
     this.panel.querySelector('[data-action="dim-mode"]').addEventListener("change", (event) => VisualNovelAPI.setDimMode(event.currentTarget.value));
@@ -1497,6 +1704,7 @@ class VisualNovelDirector {
       ...foundry.utils.deepClone(source),
       id: foundry.utils.randomID(),
       sourceId: source.id,
+      quickVariantIds: [],
       tabId: this.currentTabId
     });
     await this.setLibrary(library);
@@ -1517,6 +1725,34 @@ class VisualNovelDirector {
   static restoreMinimizedState() {
     const minimized = localStorage.getItem(`${MODULE_ID}.directorMinimized`) === "1";
     this.toggleMinimized(minimized);
+  }
+
+  static getPanelBounds() {
+    const margin = 8;
+    const availableWidth = Math.max(1, window.innerWidth - (margin * 2));
+    const availableHeight = Math.max(1, window.innerHeight - (margin * 2));
+    return {
+      margin,
+      minWidth: Math.min(560, availableWidth),
+      minHeight: Math.min(360, availableHeight),
+      maxWidth: availableWidth,
+      maxHeight: availableHeight
+    };
+  }
+
+  static fitPanelToViewport() {
+    if (!this.panel) return;
+    const bounds = this.getPanelBounds();
+    const rect = this.panel.getBoundingClientRect();
+    const width = Math.min(bounds.maxWidth, Math.max(bounds.minWidth, rect.width));
+    const height = Math.min(bounds.maxHeight, Math.max(bounds.minHeight, rect.height));
+    const left = Math.min(Math.max(bounds.margin, rect.left), Math.max(bounds.margin, window.innerWidth - width - bounds.margin));
+    const top = Math.min(Math.max(bounds.margin, rect.top), Math.max(bounds.margin, window.innerHeight - height - bounds.margin));
+    this.panel.style.width = `${width}px`;
+    this.panel.style.height = `${height}px`;
+    this.panel.style.left = `${left}px`;
+    this.panel.style.top = `${top}px`;
+    this.panel.style.right = "auto";
   }
 
   static startResize(event) {
@@ -1550,10 +1786,11 @@ class VisualNovelDirector {
   static resizePanel(event) {
     if (!this.resizeState || event.pointerId !== this.resizeState.pointerId) return;
     const rect = this.panel.getBoundingClientRect();
-    const maxWidth = Math.max(360, window.innerWidth - rect.left - 8);
-    const maxHeight = Math.max(260, window.innerHeight - rect.top - 8);
-    const width = Math.min(maxWidth, Math.max(360, this.resizeState.startWidth + event.clientX - this.resizeState.startX));
-    const height = Math.min(maxHeight, Math.max(260, this.resizeState.startHeight + event.clientY - this.resizeState.startY));
+    const bounds = this.getPanelBounds();
+    const maxWidth = Math.max(bounds.minWidth, window.innerWidth - rect.left - bounds.margin);
+    const maxHeight = Math.max(bounds.minHeight, window.innerHeight - rect.top - bounds.margin);
+    const width = Math.min(maxWidth, Math.max(bounds.minWidth, this.resizeState.startWidth + event.clientX - this.resizeState.startX));
+    const height = Math.min(maxHeight, Math.max(bounds.minHeight, this.resizeState.startHeight + event.clientY - this.resizeState.startY));
     this.panel.style.width = `${width}px`;
     this.panel.style.height = `${height}px`;
   }
@@ -1563,7 +1800,10 @@ class VisualNovelDirector {
     this.resizeState = null;
     document.documentElement.classList.remove("fvn-document--resizing");
     const rect = this.panel.getBoundingClientRect();
-    localStorage.setItem(`${MODULE_ID}.directorSize`, JSON.stringify({ width: rect.width, height: rect.height }));
+    const sizeKey = this.panel.classList.contains("fvn-director--editor-mode")
+      ? `${MODULE_ID}.directorEditorSize`
+      : `${MODULE_ID}.directorSize`;
+    localStorage.setItem(sizeKey, JSON.stringify({ width: rect.width, height: rect.height }));
   }
 
   static restorePanelSize() {
@@ -1571,8 +1811,9 @@ class VisualNovelDirector {
     try { saved = JSON.parse(localStorage.getItem(`${MODULE_ID}.directorSize`) || "null"); }
     catch (_error) { saved = null; }
     if (!saved || !Number.isFinite(saved.width) || !Number.isFinite(saved.height)) return;
-    this.panel.style.width = `${Math.min(Math.max(360, saved.width), window.innerWidth - 16)}px`;
-    this.panel.style.height = `${Math.min(Math.max(260, saved.height), window.innerHeight - 16)}px`;
+    const bounds = this.getPanelBounds();
+    this.panel.style.width = `${Math.min(bounds.maxWidth, Math.max(bounds.minWidth, saved.width))}px`;
+    this.panel.style.height = `${Math.min(bounds.maxHeight, Math.max(bounds.minHeight, saved.height))}px`;
   }
 
   static startDrag(event) {
@@ -2257,7 +2498,7 @@ class VisualNovelDirector {
             <span class="fvn-character__title"><strong>${VisualNovelAPI.escapeHtml(character.name)}</strong>${visible ? `<em><i class="fa-solid fa-circle"></i> ${game.i18n.localize("FVN.OnStage")}</em>` : ""}</span>
             <span>${Math.round(character.scale * 100)}% · X ${Math.round(x * 100)} · Y ${Math.round(y * 100)}</span>
           </button>
-          ${this.variantOptions(character)}
+          ${this.presetVariantControls(character)}
           <div class="fvn-character__actions">
             <button type="button" data-action="toggle" class="${visible ? "is-active" : ""}" title="${visible ? game.i18n.localize("FVN.Hide") : game.i18n.localize("FVN.Show")}"><i class="fa-solid ${visible ? "fa-eye-slash" : "fa-eye"}"></i></button>
             <button type="button" data-action="edit" title="${game.i18n.localize("FVN.Edit")}"><i class="fa-solid fa-pen"></i></button>
@@ -2326,7 +2567,7 @@ class VisualNovelDirector {
     for (const id of ids) {
       const original = pool.find((entry) => entry.id === id);
       if (!original) continue;
-      library.push({ ...foundry.utils.deepClone(original), id: foundry.utils.randomID(), sourceId: original.id, tabId: this.currentTabId });
+      library.push({ ...foundry.utils.deepClone(original), id: foundry.utils.randomID(), sourceId: original.id, quickVariantIds: [], tabId: this.currentTabId });
     }
     await this.setLibrary(library);
     this.closePoolPicker();
@@ -2509,6 +2750,41 @@ class VisualNovelDirector {
     editor.elements.name.focus();
   }
 
+  static renderQuickVariantSlots(character = null, { pool = false } = {}) {
+    const section = this.panel?.querySelector("[data-region='quick-variant-slots']");
+    const list = this.panel?.querySelector("[data-region='quick-variant-slot-list']");
+    if (!section || !list) return;
+    section.hidden = pool;
+    if (pool) {
+      list.innerHTML = "";
+      return;
+    }
+
+    const variants = Array.isArray(character?.variants) ? character.variants : [];
+    const current = Array.isArray(character?.quickVariantIds) ? character.quickVariantIds.slice(0, 6) : [];
+    while (current.length < 6) current.push(null);
+
+    const options = [
+      { value: "", label: game.i18n.localize("FVN.QuickVariantEmpty") },
+      { value: "__main__", label: game.i18n.localize("FVN.MainImage") },
+      ...variants.map((variant) => ({ value: String(variant.id), label: String(variant.name) }))
+    ];
+
+    list.innerHTML = current.map((selected, index) => {
+      const html = options.map((option) =>
+        `<option value="${VisualNovelAPI.escapeHtml(option.value)}" ${String(selected ?? "") === option.value ? "selected" : ""}>${VisualNovelAPI.escapeHtml(option.label)}</option>`
+      ).join("");
+      return `<label><span>${index + 1}</span><select name="quickVariantSlot${index + 1}">${html}</select></label>`;
+    }).join("");
+  }
+
+  static collectQuickVariantIds(form) {
+    return Array.from({ length: 6 }, (_, index) => {
+      const value = form.elements[`quickVariantSlot${index + 1}`]?.value ?? "";
+      return value || null;
+    });
+  }
+
   static renderVariantRows(variants = []) {
     const list = this.panel?.querySelector("[data-region='variant-list']");
     if (!list) return;
@@ -2533,6 +2809,16 @@ class VisualNovelDirector {
       </div>
       <button type="button" data-action="delete-variant" class="fvn-danger-icon" title="${game.i18n.localize("FVN.Delete")}"><i class="fa-solid fa-trash"></i></button>`;
     list.appendChild(row);
+
+    // When the user adds a new variant interactively, keep the newest row in view
+    // and place the cursor in its name field. Existing variants loaded into the
+    // editor should not steal scroll position or focus.
+    if (!variant.id && !variant.name && !variant.image) {
+      requestAnimationFrame(() => {
+        row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        row.querySelector("[data-variant-field='name']")?.focus({ preventScroll: true });
+      });
+    }
   }
 
   static browseVariantImage(row) {
@@ -2556,10 +2842,194 @@ class VisualNovelDirector {
 
   static variantOptions(character) {
     if (!Array.isArray(character?.variants) || !character.variants.length) return "";
-    const options = [`<option value="">${game.i18n.localize("FVN.MainImage")}</option>`, ...character.variants.map((variant) =>
-      `<option value="${variant.id}" ${String(character.activeVariantId) === String(variant.id) ? "selected" : ""}>${VisualNovelAPI.escapeHtml(variant.name)}</option>`
-    )].join("");
-    return `<label class="fvn-variant-select"><i class="fa-solid fa-masks-theater"></i><select data-action="select-variant" title="${game.i18n.localize("FVN.SelectVariant")}">${options}</select></label>`;
+
+    const quickIds = (Array.isArray(character.quickVariantIds) ? character.quickVariantIds : [])
+      .filter(Boolean)
+      .map((value) => String(value))
+      .slice(0, 6);
+    const quickSet = new Set(quickIds);
+    const limitReached = quickSet.size >= 6;
+    const activeVariant = character.variants.find((variant) => String(variant.id) === String(character.activeVariantId));
+    const activeLabel = activeVariant?.name || game.i18n.localize("FVN.MainImage");
+
+    const entries = [
+      {
+        id: "__main__",
+        selectId: "",
+        name: game.i18n.localize("FVN.MainImage"),
+        image: character.image || "",
+        active: !character.activeVariantId
+      },
+      ...character.variants.map((variant) => ({
+        id: String(variant.id),
+        selectId: String(variant.id),
+        name: String(variant.name),
+        image: String(variant.image),
+        active: String(character.activeVariantId) === String(variant.id)
+      }))
+    ];
+
+    const rows = entries.map((entry) => {
+      const checked = quickSet.has(entry.id);
+      const disabled = limitReached && !checked;
+      return `
+        <div class="fvn-variant-picker__row ${entry.active ? "is-active" : ""}">
+          <button type="button"
+            class="fvn-variant-picker__choice"
+            data-action="select-variant"
+            data-variant-id="${VisualNovelAPI.escapeHtml(entry.selectId)}"
+            title="${VisualNovelAPI.escapeHtml(entry.name)}">
+            <span class="fvn-variant-picker__thumb fvn-checkerboard"><img src="${VisualNovelAPI.escapeHtml(entry.image)}" alt="" /></span>
+            <span class="fvn-variant-picker__name">${VisualNovelAPI.escapeHtml(entry.name)}</span>
+            <i class="fa-solid fa-circle-check fvn-variant-picker__active-mark" aria-hidden="true"></i>
+          </button>
+          <label class="fvn-variant-picker__quick" title="${game.i18n.localize("FVN.QuickVariants")}">
+            <input type="checkbox"
+              data-quick-variant-id="${VisualNovelAPI.escapeHtml(entry.id)}"
+              ${checked ? "checked" : ""}
+              ${disabled ? "disabled" : ""} />
+            <span aria-hidden="true"><i class="fa-solid fa-bolt"></i></span>
+          </label>
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="fvn-variant-picker">
+        <button type="button"
+          class="fvn-variant-picker__trigger"
+          data-action="toggle-variant-picker"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="${game.i18n.localize("FVN.SelectVariant")}">
+          <i class="fa-solid fa-masks-theater"></i>
+          <span>${VisualNovelAPI.escapeHtml(activeLabel)}</span>
+          <small data-region="quick-variant-count">${quickSet.size}/6</small>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div class="fvn-variant-picker__menu" hidden>
+          ${rows}
+        </div>
+      </div>`;
+  }
+
+  static closeVariantPickers(except = null) {
+    if (!this.panel) return;
+    for (const picker of this.panel.querySelectorAll(".fvn-variant-picker")) {
+      if (picker === except) continue;
+      const menu = picker.querySelector(".fvn-variant-picker__menu");
+      const trigger = picker.querySelector("[data-action='toggle-variant-picker']");
+      if (menu) menu.hidden = true;
+      trigger?.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  static async setQuickVariantSelected(characterId, variantId, selected) {
+    const library = this.getLibrary();
+    const index = library.findIndex((entry) => String(entry.id) === String(characterId));
+    if (index < 0) return false;
+
+    const character = library[index];
+    const id = String(variantId || "");
+    const valid = id === "__main__" || (character.variants ?? []).some((entry) => String(entry.id) === id);
+    if (!valid) return false;
+
+    const current = (Array.isArray(character.quickVariantIds) ? character.quickVariantIds : [])
+      .filter(Boolean)
+      .map((value) => String(value))
+      .filter((value, position, array) => array.indexOf(value) === position);
+
+    const existingIndex = current.indexOf(id);
+    if (selected) {
+      if (existingIndex < 0) {
+        if (current.length >= 6) {
+          ui.notifications.warn(`${game.i18n.localize("FVN.QuickVariants")}: 6/6`);
+          return false;
+        }
+        current.push(id);
+      }
+    } else if (existingIndex >= 0) {
+      current.splice(existingIndex, 1);
+    }
+
+    character.quickVariantIds = current;
+    library[index] = character;
+    await this.setLibrary(library);
+    return true;
+  }
+
+  static syncVariantPickerQuickState(characterId) {
+    const card = this.panel?.querySelector(`[data-character-id="${CSS.escape(String(characterId))}"]`);
+    if (!card) return;
+    const character = this.getLibrary().find((entry) => String(entry.id) === String(characterId));
+    if (!character) return;
+
+    const selected = new Set((Array.isArray(character.quickVariantIds) ? character.quickVariantIds : [])
+      .filter(Boolean)
+      .map((value) => String(value))
+      .slice(0, 6));
+    const limitReached = selected.size >= 6;
+
+    for (const input of card.querySelectorAll("[data-quick-variant-id]")) {
+      const checked = selected.has(String(input.dataset.quickVariantId));
+      input.checked = checked;
+      input.disabled = limitReached && !checked;
+    }
+    const count = card.querySelector("[data-region='quick-variant-count']");
+    if (count) count.textContent = `${selected.size}/6`;
+  }
+
+  static quickVariantSlots(character) {
+    const configured = Array.isArray(character?.quickVariantIds) ? character.quickVariantIds.slice(0, 6) : [];
+    while (configured.length < 6) configured.push(null);
+    const variants = Array.isArray(character?.variants) ? character.variants : [];
+    const slots = configured.map((slot) => {
+      if (!slot) return { empty: true };
+      if (slot === "__main__") return {
+        empty: false,
+        id: "",
+        name: game.i18n.localize("FVN.MainImage"),
+        image: character?.image || ""
+      };
+      const variant = variants.find((entry) => String(entry.id) === String(slot));
+      return variant
+        ? { empty: false, id: String(variant.id), name: String(variant.name), image: String(variant.image) }
+        : { empty: true };
+    });
+
+    return `<div class="fvn-scene-palette__variant-slots" aria-label="${game.i18n.localize("FVN.QuickVariants")}">${slots.map((slot) => {
+      if (slot.empty) return '<span class="fvn-scene-palette__variant-slot is-empty" aria-hidden="true"></span>';
+      const active = slot.id === ""
+        ? !character.activeVariantId
+        : String(character.activeVariantId) === String(slot.id);
+      return `<button type="button"
+        class="fvn-scene-palette__variant-slot ${active ? "is-active" : ""}"
+        data-action="select-quick-variant"
+        data-variant-id="${VisualNovelAPI.escapeHtml(slot.id)}"
+        title="${VisualNovelAPI.escapeHtml(slot.name)}"
+        aria-label="${VisualNovelAPI.escapeHtml(slot.name)}">
+          <img src="${VisualNovelAPI.escapeHtml(slot.image)}" alt="" />
+        </button>`;
+    }).join("")}</div>`;
+  }
+
+  static transitionOptions(character) {
+    if (!Array.isArray(character?.variants) || !character.variants.length) return "";
+    const selected = ["none", "flip", "dissolve", "blur", "flash"].includes(character.variantTransition)
+      ? character.variantTransition
+      : "none";
+    const options = [
+      ["none", "FVN.TransitionNone"],
+      ["flip", "FVN.TransitionFlip"],
+      ["dissolve", "FVN.TransitionDissolve"],
+      ["blur", "FVN.TransitionBlur"],
+      ["flash", "FVN.TransitionFlash"]
+    ].map(([value, key]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${game.i18n.localize(key)}</option>`).join("");
+    return `<label class="fvn-transition-select" title="${game.i18n.localize("FVN.VariantTransition")}"><i class="fa-solid fa-wand-magic-sparkles"></i><select data-action="select-variant-transition" aria-label="${game.i18n.localize("FVN.VariantTransition")}">${options}</select></label>`;
+  }
+
+  static presetVariantControls(character) {
+    if (!Array.isArray(character?.variants) || !character.variants.length) return "";
+    return `<div class="fvn-preset-variant-controls">${this.variantOptions(character)}${this.transitionOptions(character)}</div>`;
   }
 
   static async setCharacterVariant(characterId, variantId) {
@@ -2571,10 +3041,19 @@ class VisualNovelDirector {
     library[index] = character;
     await this.setLibrary(library);
     if (this.getVisibleIds().has(String(characterId))) await VisualNovelAPI.show(character);
-    else {
-      await this.renderCharacters();
-      VisualNovelScenePalette.render();
-    }
+    await this.renderCharacters();
+    VisualNovelScenePalette.render();
+  }
+
+
+  static async setCharacterTransition(characterId, transition) {
+    const allowed = ["none", "flip", "dissolve", "blur", "flash"];
+    const library = this.getLibrary();
+    const index = library.findIndex((entry) => String(entry.id) === String(characterId));
+    if (index < 0) return;
+    library[index].variantTransition = allowed.includes(transition) ? transition : "none";
+    await this.setLibrary(library);
+    await this.renderCharacters();
   }
 
   static closeEditor() {
@@ -2600,8 +3079,19 @@ class VisualNovelDirector {
       rectHeight: rect.height
     };
     this.panel.classList.add("fvn-director--editor-mode");
-    const compactWidth = Math.min(720, Math.max(520, window.innerWidth - 32));
-    const compactHeight = Math.min(760, Math.max(420, window.innerHeight - 32));
+    const bounds = this.getPanelBounds();
+    let savedEditorSize = null;
+    try { savedEditorSize = JSON.parse(localStorage.getItem(`${MODULE_ID}.directorEditorSize`) || "null"); }
+    catch (_error) { savedEditorSize = null; }
+
+    const compactWidth = Number.isFinite(savedEditorSize?.width)
+      ? Math.min(bounds.maxWidth, Math.max(bounds.minWidth, savedEditorSize.width))
+      : Math.min(720, bounds.maxWidth);
+
+    const compactHeight = Number.isFinite(savedEditorSize?.height)
+      ? Math.min(bounds.maxHeight, Math.max(bounds.minHeight, savedEditorSize.height))
+      : Math.min(760, bounds.maxHeight);
+
     this.panel.style.width = `${compactWidth}px`;
     this.panel.style.height = `${compactHeight}px`;
     const current = this.panel.getBoundingClientRect();
@@ -2804,6 +3294,7 @@ class VisualNovelDirector {
       image,
       variants,
       activeVariantId: variants.some((variant) => String(variant.id) === String(existing.activeVariantId)) ? existing.activeVariantId : null,
+      quickVariantIds: Array.isArray(existing.quickVariantIds) ? existing.quickVariantIds : [],
       tabId: form.elements.tabId.value || this.currentTabId || this.getTabs()[0]?.id || null,
       x: Math.min(1, Math.max(0, Number(form.elements.x.value) || 0)),
       y: Math.min(1, Math.max(0, Number(form.elements.y.value) || 0)),
@@ -2886,15 +3377,20 @@ class VisualNovelOnboarding {
   static releaseNotes() {
     return {
       features: [
-        game.i18n.localize("FVN.ReleaseFeatureArchitecture"),
-        game.i18n.localize("FVN.ReleaseFeaturePolish"),
-        game.i18n.localize("FVN.ReleaseFeatureOnboarding"),
-        game.i18n.localize("FVN.ReleaseFeatureDiagnostics")
+        game.i18n.localize("FVN.ReleaseFeatureQuickVariants"),
+        game.i18n.localize("FVN.ReleaseFeatureTransitions"),
+        game.i18n.localize("FVN.ReleaseFeatureSpotlight"),
+        game.i18n.localize("FVN.ReleaseFeatureQuickToolbar"),
+        game.i18n.localize("FVN.ReleaseFeatureLightTheme"),
+        game.i18n.localize("FVN.ReleaseFeatureResponsive"),
+        game.i18n.localize("FVN.ReleaseFeatureVariantEditor")
       ],
       fixes: [
-        game.i18n.localize("FVN.ReleaseFixLayout"),
-        game.i18n.localize("FVN.ReleaseFixConsistency"),
-        game.i18n.localize("FVN.ReleaseFixMaintenance")
+        game.i18n.localize("FVN.ReleaseFixPersistence"),
+        game.i18n.localize("FVN.ReleaseFixContrast"),
+        game.i18n.localize("FVN.ReleaseFixQuickAccess"),
+        game.i18n.localize("FVN.ReleaseFixScenePreset"),
+        game.i18n.localize("FVN.ReleaseFixPolish")
       ]
     };
   }
@@ -3249,6 +3745,7 @@ class VisualNovelAPI {
     const id = typeof characterOrId === "string" ? characterOrId : (characterOrId.characterId ?? characterOrId.id);
     const state = this.getState();
     state.portraits = state.portraits.filter((entry) => String(entry.characterId ?? entry.id) !== String(id));
+    if (String(state.spotlightCharacterId ?? "") === String(id)) state.spotlightCharacterId = null;
     await this.commitState(state);
   }
 
@@ -3354,6 +3851,33 @@ class VisualNovelAPI {
 
     if (portrait) await this.commitState(state);
     else VisualNovelScenePalette.render();
+  }
+
+  static async toggleSpotlight(characterId, force = null) {
+    if (!game.user.isGM || !characterId) return;
+    const state = this.getState();
+    const id = String(characterId);
+    const portrait = state.portraits.find((entry) => String(entry.characterId ?? entry.id) === id);
+    if (!portrait) {
+      ui.notifications.warn(game.i18n.localize("FVN.SpotlightRequiresVisible"));
+      return;
+    }
+
+    const current = state.spotlightCharacterId ? String(state.spotlightCharacterId) : null;
+    const next = force === false || (force === null && current === id)
+      ? null
+      : id;
+
+    state.spotlightCharacterId = next;
+    await this.commitState(state);
+  }
+
+  static async resetSpotlight() {
+    if (!game.user.isGM) return;
+    const state = this.getState();
+    if (!state.spotlightCharacterId) return;
+    state.spotlightCharacterId = null;
+    await this.commitState(state);
   }
 
   static async resetCamera() {
