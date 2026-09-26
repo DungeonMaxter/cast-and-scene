@@ -4119,3 +4119,17 @@ body.theme-light .fvn-scene-palette__variant-slot.is-empty {
   border-color: rgba(82,74,66,.34);
   background: rgba(82,74,66,.09);
 }
+
+
+/* v1.1.0 - empty Quick Variant slots use fill only, populated slots keep borders */
+.fvn-scene-palette__variant-slot.is-empty {
+  border-color: transparent;
+  border-style: solid;
+  box-shadow: none;
+}
+
+body.theme-light .fvn-scene-palette__variant-slot.is-empty {
+  border-color: transparent;
+  border-style: solid;
+  box-shadow: none;
+}
