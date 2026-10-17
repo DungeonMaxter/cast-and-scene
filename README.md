@@ -1,6 +1,6 @@
 # Cast & Scene
 
-**Version 1.1.0**\
+**Version 1.2.0**\
 **Author:** Dungeon Maxter\
 **Compatibility:** Foundry Virtual Tabletop v14\
 **System:** System agnostic\
@@ -20,6 +20,12 @@ New to Cast & Scene? Read the [Getting Started
 Guide](docs/GETTING-STARTED.md) for a complete walkthrough of Character
 Pool, Scene Presets, Quick Access, Camera Focus, background effects,
 Silhouette, Performance Monitor, and scene-linked presets.
+
+## New in 1.2.0
+
+Configurable keyboard and macro controls, optional Quick Access Touch panel, precise X/Y positioning, preset-switch behavior, compact preset/variant displays, customizable name labels, and Forge/Monk's Common Display compatibility.
+
+See [Controls and presentation settings](docs/CONTROLS.md) for the new commands and settings. Keys are unassigned by default; ready-to-use macros can be created from module settings.
 
 ## Highlights
 

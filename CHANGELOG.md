@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.2.0 - Live controls, presentation and streaming
+
+Cast & Scene 1.2.0 adds configurable live controls, a cleaner optional Touch panel, presentation settings and Forge streaming compatibility.
+
+### Live controls and macros
+- Assign Next/Previous and selected-character controls for show/hide, Spotlight, silhouette/reveal, Camera Focus and six Quick Variants.
+- Use the same actions directly for character slots 1–10. Slot order follows the selected Quick Access preset.
+- Create 14 basic control macros or all 114 controls from module settings. Existing macros and custom edits are preserved.
+- Keyboard shortcuts are unassigned by default. Touch Portal requires an existing input/macro connection to Foundry; this release does not provide global hotkeys or a Touch Portal transport.
+
+### Quick Access and presets
+- Optional Quick Access Touch panel: tap a portrait to select it and use controls below the cast. Standard mode stays compact.
+- Choose named preset tabs or squares with map thumbnails, numbers or letters. Map previews reuse linked Scene thumbnails with numbered fallbacks.
+- Choose thumbnails, numbers or letters for Quick Variant squares.
+- Quick Access starts near the vertical center, preserves saved positions and stays anchored while dragging its launcher.
+- Edit precise X/Y percentages in preset cards and use synchronized numeric/slider controls in the character editor.
+- Choose whether showing a character from another preset keeps or replaces the previous cast. Scene activation still clears live presentation; saved presets remain intact.
+
+### Character names
+- Choose base or above-head placement, attached or floating camera behavior, framed/minimal/outlined text, and Small/Medium/Large sizes.
+- Floating labels follow camera movement while staying readable and within the stage. Above-head placement accounts for transparent padding when pixel access is available.
+- Use standard fonts plus font families loaded by Foundry, including world-configured custom fonts. Choices apply to players and the Streamer client.
+
+### Compatibility and fixes
+- Forge-aware FilePicker priority supports Bazaar and Forge Assets.
+- Stage visibility works with Monk's Common Display Hide UI; the author confirmed Forge/OBS tests in their configured Streamer setup.
+- Release-note dismissal persists when closing with buttons, X or Escape.
+- Foundry VTT 14, system agnostic, same module ID `cast-and-scene`, no data-schema migration.
+
+### Validation and limits
+- Automated browser checks exercise module code with simulated Foundry APIs; they complement the author's manual tests and do not certify every client/module combination.
+- Stage Master compatibility and an independent OBS Utils layer are not part of this release.
+- Different viewport aspect ratios can still affect apparent portrait spacing. Remote images that forbid pixel access use image-box fallback for name alignment.
+
+Back up your world before updating. See [Controls](https://github.com/DungeonMaxter/cast-and-scene/blob/v1.2.0/docs/CONTROLS.md) and [Getting Started](https://github.com/DungeonMaxter/cast-and-scene/blob/v1.2.0/docs/GETTING-STARTED.md).
+
 ## 1.1.0 - Spotlight, Quick Variants and Variant Transitions
 
 ### Quick Variants
