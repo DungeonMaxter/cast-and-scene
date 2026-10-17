@@ -16,7 +16,7 @@ const PATREON_URL = "https://www.patreon.com/cw/DungeonMaxter";
 const DATA_SCHEMA_VERSION_SETTING = "dataSchemaVersion";
 const LEGACY_NAMESPACE_MIGRATED_SETTING = "legacyNamespaceMigrated";
 const DATA_SCHEMA_VERSION = 1;
-const CURRENT_VERSION = "1.1.0";
+const CURRENT_VERSION = "1.2.0";
 
 const DEFAULT_CHARACTER = {
   id: null,
@@ -56,6 +56,71 @@ const DEFAULT_TABS = [
 ];
 
 class VisualNovelStage {
+  static nameFontChoices() {
+    const choices = { default: "Foundry default", arial: "Arial", georgia: "Georgia", times: "Times New Roman", verdana: "Verdana", trebuchet: "Trebuchet MS", monospace: "Courier New" };
+    const FontConfig = foundry.applications.settings?.menus?.FontConfig;
+    for (const [family, label] of Object.entries(FontConfig?.getAvailableFontChoices?.() ?? {})) {
+      if (family && family.length <= 200 && !/[\x00-\x1f]/.test(family)) choices[`family:${family}`] = `${label} — Foundry`;
+    }
+    return choices;
+  }
+
+  static refreshNameFontChoices() {
+    const setting = game.settings.settings?.get?.(`${MODULE_ID}.nameFont`);
+    if (setting) setting.choices = this.nameFontChoices();
+  }
+  static nameImageBounds = new Map();
+
+  static nameHeadDistance(image) {
+    if (!image?.complete || !image?.naturalWidth || !image?.naturalHeight) return image?.offsetHeight || 0;
+    const key = image.currentSrc || image.src;
+    let top = this.nameImageBounds.get(key);
+    if (top === undefined) {
+      top = 0;
+      try {
+        // Inspect a tiny copy once per asset; never read full-size pixels per frame.
+        const factor = Math.min(1, 128 / Math.max(image.naturalWidth, image.naturalHeight));
+        const sample = document.createElement("canvas");
+        sample.width = Math.max(1, Math.round(image.naturalWidth * factor));
+        sample.height = Math.max(1, Math.round(image.naturalHeight * factor));
+        const context = sample.getContext("2d", { willReadFrequently: true });
+        context.drawImage(image, 0, 0, sample.width, sample.height);
+        const pixels = context.getImageData(0, 0, sample.width, sample.height).data;
+        outer: for (let y = 0; y < sample.height; y++) {
+          for (let x = 0; x < sample.width; x++) {
+            if (pixels[(y * sample.width + x) * 4 + 3] > 32) { top = y / sample.height; break outer; }
+          }
+        }
+      } catch (_error) {
+        // Remote images can prohibit pixel access; fall back to image bounds.
+      }
+      this.nameImageBounds.set(key, top);
+      if (this.nameImageBounds.size > 64) this.nameImageBounds.delete(this.nameImageBounds.keys().next().value);
+    }
+    // Account for object-fit: contain and bottom alignment as well as alpha padding.
+    const contentHeight = Math.min(image.offsetWidth / image.naturalWidth, image.offsetHeight / image.naturalHeight) * image.naturalHeight;
+    return contentHeight * (1 - top);
+  }
+  static nameplateFrame = null;
+
+  static trackNameplates(state) {
+    if (this.nameplateFrame !== null) cancelAnimationFrame(this.nameplateFrame);
+    const until = performance.now() + 850;
+    const animate = game.settings.get(MODULE_ID, "nameBehavior") === "floating";
+    const tick = () => {
+      for (const character of state.portraits ?? []) this.renderNameplate(character, { visible: state.namesVisible });
+      this.nameplateFrame = animate && performance.now() < until ? requestAnimationFrame(tick) : null;
+    };
+    tick();
+  }
+  static displayObserver = null;
+
+  static syncDisplay(stage = document.getElementById("fvn-stage")) {
+    if (!stage) return;
+    if (this.locallyHidden) stage.style.setProperty("display", "none", "important");
+    else if (document.body.classList.contains("hide-ui")) stage.style.setProperty("display", "block", "important");
+    else stage.style.removeProperty("display");
+  }
   static resizeObserver = null;
   static safeAreaFrame = null;
   static currentState = null;
@@ -69,6 +134,7 @@ class VisualNovelStage {
     this.locallyHidden = !visible;
     const stage = this.ensure();
     stage.hidden = this.locallyHidden;
+    this.syncDisplay(stage);
     stage.setAttribute("aria-hidden", this.locallyHidden ? "true" : "false");
     if (!this.locallyHidden) {
       const state = this.normalizeStageState(game.settings.get(MODULE_ID, STATE_SETTING));
@@ -107,6 +173,9 @@ class VisualNovelStage {
 
     document.body.appendChild(stage);
     stage.hidden = this.locallyHidden;
+    this.syncDisplay(stage);
+    this.displayObserver ??= new MutationObserver(() => this.syncDisplay());
+    this.displayObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     stage.setAttribute("aria-hidden", this.locallyHidden ? "true" : "false");
     this.activateSafeAreaTracking();
     this.activatePreviewDragging(stage);
@@ -337,6 +406,7 @@ class VisualNovelStage {
     world.style.setProperty('--fvn-camera-y', String(camera.enabled ? resolved.y : 0));
     world.style.setProperty('--fvn-camera-zoom', String(camera.enabled ? resolved.zoom : 1));
     world.style.setProperty('--fvn-camera-duration', '700ms');
+    this.trackNameplates(state);
   }
 
   static getPortraitElement(id, { create = true } = {}) {
@@ -545,6 +615,10 @@ class VisualNovelStage {
     const stage = this.ensure();
     const layer = stage.querySelector(".fvn-stage__names");
     if (!layer) return;
+    const floating = game.settings.get(MODULE_ID, "nameBehavior") === "floating";
+    const target = floating ? stage : stage.querySelector('.fvn-stage__camera-world');
+    if (target && layer.parentElement !== target) target.appendChild(layer);
+    layer.classList.toggle("fvn-stage__names--floating", floating);
     const id = String(character.id);
     let label = layer.querySelector(`[data-nameplate-id="${CSS.escape(id)}"]`);
     if (!label) {
@@ -554,9 +628,47 @@ class VisualNovelStage {
       layer.appendChild(label);
     }
     label.textContent = character.name || "";
+    label.dataset.style = game.settings.get(MODULE_ID, "nameStyle") || "framed";
+    const fonts = {
+      default: "var(--font-primary, var(--font-body, sans-serif))",
+      arial: "Arial, Helvetica, sans-serif", georgia: "Georgia, serif",
+      times: '"Times New Roman", Times, serif', verdana: "Verdana, sans-serif",
+      trebuchet: '"Trebuchet MS", sans-serif', monospace: '"Courier New", monospace'
+    };
+    const selectedFont = game.settings.get(MODULE_ID, "nameFont") || "default";
+    const family = selectedFont.startsWith("family:") ? selectedFont.slice(7) : "";
+    label.style.fontFamily = family && family.length <= 200 && !/[\x00-\x1f]/.test(family)
+      ? `"${family.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}", sans-serif`
+      : fonts[selectedFont] || fonts.default;
+    label.style.fontSize = `${({ small: 18, medium: 24, large: 32 })[game.settings.get(MODULE_ID, "nameSize")] || 18}px`;
+    const above = game.settings.get(MODULE_ID, "namePosition") === "head";
+    const wrap = this.getPortraitElement(character.id, { create: false });
+    const image = wrap?.querySelector('.fvn-stage__portrait');
+    const headDistance = above ? this.nameHeadDistance(image) : 0;
+    const portraitHeight = headDistance * (Number(character.scale) || 1);
     label.style.left = `${character.x * 100}%`;
-    label.style.top = `${character.y * 100}%`;
+    label.style.top = above ? `calc(${character.y * 100}% - ${portraitHeight}px)` : `${character.y * 100}%`;
+    if (floating) {
+      const stageRect = stage.getBoundingClientRect();
+      const imageRect = image?.getBoundingClientRect();
+      if (stageRect.width > 0 && stageRect.height > 0) {
+        const x = imageRect?.width ? imageRect.left + imageRect.width / 2 - stageRect.left : Number(character.x) * stageRect.width;
+        const y = imageRect?.height ? imageRect.bottom - (above && image.offsetHeight ? headDistance * imageRect.height / image.offsetHeight : 0) - stageRect.top : Number(character.y) * stageRect.height;
+        const halfWidth = Math.min(label.offsetWidth / 2, Math.max(0, stageRect.width / 2 - 4));
+        const height = Math.min(label.offsetHeight, Math.max(0, stageRect.height - 12));
+        label.style.maxWidth = `${Math.max(1, stageRect.width - 8)}px`;
+        label.style.left = `${Math.max(halfWidth + 4, Math.min(stageRect.width - halfWidth - 4, x))}px`;
+        label.style.top = `${Math.max(height + 12, Math.min(stageRect.height, y))}px`;
+      }
+    } else label.style.removeProperty("max-width");
     label.hidden = !visible || !character.name;
+    if (image && !image.complete && !image._fvnNameLoadBound) {
+      image._fvnNameLoadBound = true;
+      image.addEventListener("load", () => {
+        image._fvnNameLoadBound = false;
+        this.trackNameplates(this.currentState ?? VisualNovelAPI.getState());
+      }, { once: true });
+    }
   }
 
   static renderState(rawState = {}) {
@@ -567,6 +679,7 @@ class VisualNovelStage {
     this.currentState = foundry.utils.deepClone(state);
     const stage = this.ensure();
     stage.hidden = this.locallyHidden;
+    this.syncDisplay(stage);
     stage.setAttribute("aria-hidden", this.locallyHidden ? "true" : "false");
     const container = stage.querySelector(".fvn-stage__portraits");
     const camera = this.normalizeCamera(state.camera);
@@ -857,6 +970,33 @@ class VisualNovelStage {
 
 
 class VisualNovelScenePalette {
+  static selectedCharacterId = null;
+
+  static getSelectedCharacter() {
+    const characters = VisualNovelAPI.getQuickAccessCharacters();
+    const selected = characters.find((entry) => String(entry.id) === this.selectedCharacterId) ?? characters[0] ?? null;
+    this.selectedCharacterId = selected ? String(selected.id) : null;
+    return selected;
+  }
+
+  static selectCharacter(characterId) {
+    if (!game.user?.isGM) return false;
+    const character = VisualNovelAPI.getQuickAccessCharacters().find((entry) => String(entry.id) === String(characterId));
+    if (!character) return false;
+    this.selectedCharacterId = String(character.id);
+    this.render();
+    this.root?.querySelector(`[data-character-id="${CSS.escape(this.selectedCharacterId)}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    return true;
+  }
+
+  static cycleCharacter(direction = 1) {
+    if (!game.user?.isGM) return false;
+    const characters = VisualNovelAPI.getQuickAccessCharacters();
+    if (!characters.length) { this.selectedCharacterId = null; return false; }
+    const current = this.getSelectedCharacter();
+    const index = characters.findIndex((entry) => String(entry.id) === String(current.id));
+    return this.selectCharacter(characters[(index + (direction < 0 ? -1 : 1) + characters.length) % characters.length].id);
+  }
   static root = null;
   static expanded = false;
   static currentTabId = null;
@@ -887,6 +1027,27 @@ class VisualNovelScenePalette {
     return this.getAvailableTabs().filter((tab) => tab.isSceneBound);
   }
 
+  static getPresetThumbnail(tabId) {
+    const bindings = this.getBindings();
+    const sceneIds = Object.keys(bindings).filter((id) => Array.isArray(bindings[id]) && bindings[id].some((value) => String(value) === String(tabId)));
+    const currentId = this.getCurrentSceneId();
+    if (sceneIds.includes(currentId)) {
+      sceneIds.splice(sceneIds.indexOf(currentId), 1);
+      sceneIds.unshift(currentId);
+    }
+    for (const id of sceneIds) {
+      const thumb = game.scenes?.get?.(id)?.thumb;
+      if (typeof thumb === "string" && thumb.trim()) return thumb;
+    }
+    return null;
+  }
+
+  static alphabetLabel(index) {
+    let label = "";
+    for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) label = String.fromCharCode(65 + (n - 1) % 26) + label;
+    return label;
+  }
+
   static ensure() {
     if (!game.user.isGM) return null;
     if (this.root?.isConnected) return this.root;
@@ -897,6 +1058,17 @@ class VisualNovelScenePalette {
       <div class="fvn-scene-palette__panel" data-region="palette-panel" hidden>
         <div class="fvn-scene-palette__header"><i class="fa-solid fa-bolt"></i><span>${game.i18n.localize("FVN.QuickAccess")}</span></div>
         <div class="fvn-scene-palette__tabs" data-region="palette-tabs"></div>
+        <div class="fvn-selection" data-region="selected-controls">
+          <strong data-region="selected-name" aria-live="polite"></strong>
+          <div class="fvn-selection__actions">
+            <button type="button" data-action="selected-toggle">Show / hide</button>
+            <button type="button" data-action="selected-spotlight">Spotlight</button>
+            <button type="button" data-action="selected-silhouette">Reveal</button>
+            <button type="button" data-action="selected-focus">Zoom</button>
+          </div>
+          <div class="fvn-selection__variants" data-region="selected-variants"></div>
+          <button type="button" data-action="install-control-macros" class="fvn-selection__macros">Create control macros…</button>
+        </div>
         <div class="fvn-scene-palette__portraits" data-region="palette-portraits"></div>
         <div class="fvn-scene-palette__controls">
           <div class="fvn-scene-palette__utility-row">
@@ -923,7 +1095,9 @@ class VisualNovelScenePalette {
         <i class="fa-solid fa-masks-theater"></i>
       </button>`;
     document.body.appendChild(this.root);
+    this.root.querySelector('[data-region="palette-portraits"]').after(this.root.querySelector('[data-region="selected-controls"]'));
     this.restorePosition();
+    window.addEventListener("resize", () => { this.restorePosition(); this.fitPanel(); });
     const toggle = this.root.querySelector("[data-action='toggle-palette']");
     toggle.addEventListener("pointerdown", (event) => this.startDrag(event));
     this.root.addEventListener("change", async (event) => {
@@ -935,6 +1109,14 @@ class VisualNovelScenePalette {
     this.root.addEventListener("click", async (event) => {
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (!action) return;
+      if (action === "previous-character") return void VisualNovelAPI.previousCharacter();
+      if (action === "next-character") return void VisualNovelAPI.nextCharacter();
+      if (action === "select-palette-character") return void this.selectCharacter(event.target.closest("[data-character-id]")?.dataset.characterId);
+      if (action === "install-control-macros") return void VisualNovelAPI.showMacroInstaller();
+      if (action.startsWith("selected-")) {
+        if (action === "selected-variant") return void VisualNovelAPI.selectQuickVariant(Number(event.target.closest("[data-variant-slot]")?.dataset.variantSlot));
+        return void VisualNovelAPI.controlSelected(action.slice("selected-".length));
+      }
       if (action === "toggle-palette") {
         if (this.suppressNextClick) {
           this.suppressNextClick = false;
@@ -950,6 +1132,7 @@ class VisualNovelScenePalette {
       if (action === "toggle-palette-character") {
         const id = event.target.closest("[data-character-id]")?.dataset.characterId;
         if (!id) return;
+        if (game.settings.get(MODULE_ID, "showTouchControls")) { this.selectCharacter(id); return; }
         const visible = VisualNovelDirector.getVisibleIds().has(String(id));
         if (visible) await VisualNovelAPI.hide(id);
         else await VisualNovelAPI.show(id);
@@ -1080,6 +1263,7 @@ class VisualNovelScenePalette {
     this.root.style.bottom = `${bottom}px`;
     this.root.style.right = "auto";
     this.root.style.top = "auto";
+    this.fitPanel();
   }
 
   static endDrag(event, toggle) {
@@ -1096,6 +1280,7 @@ class VisualNovelScenePalette {
       bottom: Math.round(window.innerHeight - toggleRect.bottom)
     };
     localStorage.setItem(this.positionStorageKey, JSON.stringify(position));
+    this.fitPanel();
   }
 
   static restorePosition() {
@@ -1105,7 +1290,13 @@ class VisualNovelScenePalette {
     } catch (_error) {
       position = null;
     }
-    if (!position || !Number.isFinite(position.left) || !Number.isFinite(position.bottom)) return;
+    if (!position || !Number.isFinite(position.left) || !Number.isFinite(position.bottom)) {
+      const controls = ["#controls", "#scene-controls"].map((selector) => document.querySelector(selector))
+        .filter((element) => element && getComputedStyle(element).display !== "none")
+        .map((element) => element.getBoundingClientRect()).filter((rect) => rect.width && rect.height);
+      const left = Math.max(80, ...controls.map((rect) => rect.right + 12));
+      position = { left, bottom: Math.round((window.innerHeight - 48) / 2) };
+    }
     const toggleSize = 48;
     const margin = 8;
     const left = Math.min(Math.max(margin, position.left), Math.max(margin, window.innerWidth - toggleSize - margin));
@@ -1116,6 +1307,23 @@ class VisualNovelScenePalette {
     this.root.style.top = "auto";
   }
 
+  static fitPanel() {
+    if (!this.root) return;
+    const panel = this.root.querySelector('[data-region="palette-panel"]');
+    const toggle = this.root.querySelector('[data-action="toggle-palette"]');
+    const rect = toggle.getBoundingClientRect();
+    panel.style.position = "fixed";
+    panel.style.bottom = "auto";
+    panel.style.maxHeight = `${Math.max(48, window.innerHeight - 16)}px`;
+    panel.style.maxWidth = `${Math.max(48, window.innerWidth - 16)}px`;
+    const width = panel.getBoundingClientRect().width || 330;
+    const left = rect.right + width + 16 <= window.innerWidth ? rect.right + 8
+      : rect.left - width - 8 >= 8 ? rect.left - width - 8
+      : Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    panel.style.left = `${left}px`;
+    panel.style.top = `${Math.max(8, Math.min(rect.top - 100, window.innerHeight - panel.getBoundingClientRect().height - 8))}px`;
+  }
+
   static render() {
     if (!game.user.isGM) return;
     const root = this.ensure();
@@ -1124,11 +1332,14 @@ class VisualNovelScenePalette {
     if (!tabs.length && !this.tutorialMode) {
       this.currentTabId = null;
     }
-    if (!tabs.some((tab) => tab.id === this.currentTabId)) this.currentTabId = tabs[0].id;
+    if (!tabs.some((tab) => tab.id === this.currentTabId)) this.currentTabId = tabs[0]?.id ?? null;
     const panel = root.querySelector("[data-region='palette-panel']");
     panel.hidden = !this.expanded;
     root.classList.toggle("fvn-scene-palette--expanded", this.expanded);
+    this.fitPanel();
     const tabsRegion = root.querySelector("[data-region='palette-tabs']");
+    const sceneDisplay = game.settings.get(MODULE_ID, "sceneDisplay");
+    tabsRegion.classList.toggle("fvn-scene-palette__tabs--squares", ["squares", "letters", "thumbnails"].includes(sceneDisplay));
     tabsRegion.innerHTML = tabs.length ? tabs.map((tab) => `<button type="button" data-action="select-palette-tab" data-tab-id="${tab.id}" class="${tab.id === this.currentTabId ? "is-active" : ""} ${tab.isSceneBound ? "is-scene-bound" : "is-unbound"}" title="${VisualNovelAPI.escapeHtml(tab.name)}${tab.isSceneBound ? ` · ${game.i18n.localize("FVN.BoundToCurrentScene")}` : ""}">${tab.isSceneBound ? '<i class="fa-solid fa-link"></i>' : ''}<span>${VisualNovelAPI.escapeHtml(tab.name)}</span></button>`).join("") : `<div class="fvn-scene-palette__empty-tab">${game.i18n.localize("FVN.NoScenePresets")}</div>`;
     const state = VisualNovelAPI.getState();
     const dimButton = root.querySelector("[data-action='toggle-palette-dim']");
@@ -1171,22 +1382,69 @@ class VisualNovelScenePalette {
     }
     const visible = VisualNovelDirector.getVisibleIds();
     const characters = this.currentTabId ? VisualNovelDirector.getLibrary().filter((entry) => entry.tabId === this.currentTabId) : [];
+    const selected = this.getSelectedCharacter();
+    const selectionRegion = root.querySelector('[data-region="selected-controls"]');
+    const touchControls = Boolean(game.settings.get(MODULE_ID, "showTouchControls"));
+    selectionRegion.hidden = !touchControls;
+    root.classList.toggle("fvn-scene-palette--touch-controls", touchControls);
+    selectionRegion.querySelector('[data-region="selected-name"]').textContent = selected?.name || "No character selected";
+    const selectedVisible = selected && visible.has(String(selected.id));
+    const selectionStates = {
+      toggle: selectedVisible,
+      spotlight: selectedVisible && String(state.spotlightCharacterId) === String(selected.id),
+      silhouette: selected?.silhouette,
+      focus: selectedVisible && camera.enabled && String(camera.targetPortraitId) === String(selected.id)
+    };
+    for (const [action, active] of Object.entries(selectionStates)) {
+      const button = selectionRegion.querySelector(`[data-action="selected-${action}"]`);
+      button.disabled = !selected || (["spotlight", "focus"].includes(action) && !selectedVisible);
+      button.classList.toggle("is-active", Boolean(active));
+      button.setAttribute("aria-pressed", String(Boolean(active)));
+    }
+    selectionRegion.querySelector('[data-action="selected-toggle"]').textContent = selectedVisible ? "Hide" : "Show";
+    selectionRegion.querySelector('[data-action="selected-silhouette"]').textContent = selected?.silhouette ? "Reveal" : "Silhouette";
+    for (const button of selectionRegion.querySelectorAll('[data-action="next-character"], [data-action="previous-character"]')) button.disabled = !characters.length;
+    selectionRegion.querySelector('[data-region="selected-variants"]').innerHTML = Array.from({ length: 6 }, (_, index) => {
+      const variant = selected && VisualNovelAPI.getQuickVariant(selected, index + 1);
+      const active = variant && String(selected.activeVariantId || "") === String(variant.id || "");
+      return `<button type="button" data-action="selected-variant" data-variant-slot="${index + 1}" ${variant ? "" : "disabled"} aria-label="Quick Variant ${index + 1}: ${VisualNovelAPI.escapeHtml(variant?.name || "Empty")}" aria-pressed="${Boolean(active)}" class="${active ? "is-active" : ""}" title="${VisualNovelAPI.escapeHtml(variant?.name || "Empty Quick Variant")}">${VisualNovelDirector.variantSlotContent(index, variant?.image)}</button>`;
+    }).join("");
     const portraits = root.querySelector("[data-region='palette-portraits']");
     portraits.innerHTML = characters.length ? characters.map((character) => {
       const active = visible.has(String(character.id));
-      return `<div class="fvn-scene-palette__item" data-character-id="${character.id}">
+      return `<div class="fvn-scene-palette__item ${touchControls && String(character.id) === this.selectedCharacterId ? "is-selected" : ""}" data-character-id="${character.id}">
         <button type="button" data-action="toggle-palette-character" class="fvn-scene-palette__portrait ${active ? "is-active" : ""}" title="${VisualNovelAPI.escapeHtml(character.name)}">
           <span class="fvn-checkerboard"><img src="${VisualNovelDirector.getDisplayImage(character)}" alt="${VisualNovelAPI.escapeHtml(character.name)}" /></span>
         </button>
-        <div class="fvn-scene-palette__portrait-tools" role="group" aria-label="${VisualNovelAPI.escapeHtml(character.name)}">
+        ${!touchControls ? `<div class="fvn-scene-palette__portrait-tools" role="group" aria-label="${VisualNovelAPI.escapeHtml(character.name)}">
           <button type="button" data-action="toggle-palette-silhouette" class="fvn-scene-palette__silhouette ${Boolean(character.silhouette) ? "is-active" : ""}" title="${game.i18n.localize("FVN.Silhouette")}"><i class="fa-solid fa-user-secret"></i></button>
           <button type="button" data-action="toggle-palette-spotlight" class="fvn-scene-palette__spotlight ${state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(state.spotlightCharacterId && String(state.spotlightCharacterId) === String(character.id) ? "FVN.RestoreSpotlight" : "FVN.Spotlight")}" ${active ? "" : "disabled"}><i class="fa-solid fa-lightbulb"></i></button>
           <button type="button" data-action="focus-palette-character" class="fvn-scene-palette__focus ${VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "is-active" : ""}" title="${game.i18n.localize(VisualNovelAPI.lastFocus?.characterId === String(character.id) ? "FVN.RestoreFocus" : "FVN.FocusCharacter")}" ${active ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i></button>
         </div>
-        ${VisualNovelDirector.quickVariantSlots(character)}
+        ${VisualNovelDirector.quickVariantSlots(character)}` : ""}
         <small class="fvn-scene-palette__portrait-name">${VisualNovelAPI.escapeHtml(character.name)}</small>
       </div>`;
     }).join("") : `<div class="fvn-scene-palette__empty">${game.i18n.localize("FVN.EmptyLibrary")}</div>`;
+    if (["squares", "letters", "thumbnails"].includes(sceneDisplay)) {
+      tabsRegion.querySelectorAll('[data-action="select-palette-tab"]').forEach((button, index) => {
+        button.setAttribute("aria-label", tabs[index].name);
+        button.querySelector("span").textContent = sceneDisplay === "letters" ? this.alphabetLabel(index) : String(index + 1);
+        if (sceneDisplay === "thumbnails") {
+          const thumb = this.getPresetThumbnail(tabs[index].id);
+          if (thumb) {
+            const image = document.createElement("img");
+            image.className = "fvn-scene-palette__scene-thumb";
+            image.alt = "";
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.addEventListener("error", () => image.remove(), { once: true });
+            image.src = thumb;
+            button.appendChild(image);
+          }
+        }
+      });
+    }
+    this.fitPanel();
     VisualNovelStage.scheduleSafeAreaUpdate();
   }
 }
@@ -1348,6 +1606,12 @@ class VisualNovelDirector {
             <p><i class="fa-solid fa-up-right-and-down-left-from-center"></i> ${game.i18n.localize("FVN.DirectScaleHelp")}</p>
             <input type="hidden" name="x" value="0.18" />
             <input type="hidden" name="y" value="1" />
+            <div class="fvn-position-controls">
+              ${["x", "y"].map((axis) => `<div class="fvn-position-controls__axis">
+                <label>${axis.toUpperCase()} % <input type="number" min="0" max="100" step="0.1" data-coordinate="${axis}" aria-label="${axis.toUpperCase()} position (%)" /></label>
+                <input type="range" min="0" max="100" step="0.1" data-coordinate="${axis}" aria-label="${axis.toUpperCase()} position slider" />
+              </div>`).join("")}
+            </div>
           </div>
 
           </div>
@@ -1525,10 +1789,25 @@ class VisualNovelDirector {
 
     const editor = this.panel.querySelector("[data-region='editor']");
     editor.addEventListener("submit", (event) => this.saveCharacter(event));
-    editor.addEventListener("input", () => this.updateScenePreview());
+    editor.addEventListener("input", (event) => {
+      const axis = event.target.dataset.coordinate;
+      if (axis === "x" || axis === "y") {
+        if (event.target.value === "" || !Number.isFinite(event.target.valueAsNumber)) return;
+        editor.elements[axis].value = String(Math.min(100, Math.max(0, event.target.valueAsNumber)) / 100);
+      }
+      this.updateScenePreview();
+    });
     editor.addEventListener("change", () => this.updateScenePreview());
 
     this.panel.addEventListener("change", async (event) => {
+      const coordinate = event.target.closest('[data-action="set-coordinate"]');
+      if (coordinate) {
+        const id = coordinate.closest("[data-character-id]")?.dataset.characterId;
+        if (id && coordinate.value !== "" && Number.isFinite(coordinate.valueAsNumber)) {
+          await this.setCharacterCoordinate(id, coordinate.dataset.axis, coordinate.valueAsNumber);
+        }
+        return;
+      }
       const quickVariantToggle = event.target.closest("[data-quick-variant-id]");
       if (quickVariantToggle) {
         const characterId = quickVariantToggle.closest("[data-character-id]")?.dataset.characterId;
@@ -2494,10 +2773,15 @@ class VisualNovelDirector {
           <button type="button" class="fvn-character__thumb" data-action="toggle" title="${visible ? game.i18n.localize("FVN.Hide") : game.i18n.localize("FVN.Show")}">
             <span class="fvn-checkerboard"><img src="${this.getDisplayImage(character)}" alt="${VisualNovelAPI.escapeHtml(character.name)}" /></span>
           </button>
-          <button type="button" class="fvn-character__info" data-action="toggle" title="${visible ? game.i18n.localize("FVN.Hide") : game.i18n.localize("FVN.Show")}">
+          <div class="fvn-character__info">
+          <button type="button" class="fvn-character__summary" data-action="toggle" title="${visible ? game.i18n.localize("FVN.Hide") : game.i18n.localize("FVN.Show")}">
             <span class="fvn-character__title"><strong>${VisualNovelAPI.escapeHtml(character.name)}</strong>${visible ? `<em><i class="fa-solid fa-circle"></i> ${game.i18n.localize("FVN.OnStage")}</em>` : ""}</span>
-            <span>${Math.round(character.scale * 100)}% · X ${Math.round(x * 100)} · Y ${Math.round(y * 100)}</span>
+            <span>${Math.round(character.scale * 100)}%</span>
           </button>
+          <div class="fvn-character__coordinates">
+            ${["x", "y"].map((axis) => `<label>${axis.toUpperCase()} % <input type="number" min="0" max="100" step="0.1" data-action="set-coordinate" data-axis="${axis}" value="${Math.round((axis === "x" ? x : y) * 1000) / 10}" aria-label="${axis.toUpperCase()} position (%)" /></label>`).join("")}
+          </div>
+          </div>
           ${this.presetVariantControls(character)}
           <div class="fvn-character__actions">
             <button type="button" data-action="toggle" class="${visible ? "is-active" : ""}" title="${visible ? game.i18n.localize("FVN.Hide") : game.i18n.localize("FVN.Show")}"><i class="fa-solid ${visible ? "fa-eye-slash" : "fa-eye"}"></i></button>
@@ -2978,6 +3262,13 @@ class VisualNovelDirector {
     if (count) count.textContent = `${selected.size}/6`;
   }
 
+  static variantSlotContent(index, image) {
+    const mode = game.settings.get(MODULE_ID, "variantDisplay");
+    if (mode === "numbers") return String(index + 1);
+    if (mode === "letters") return String.fromCharCode(65 + index);
+    return image ? `<img src="${VisualNovelAPI.escapeHtml(image)}" alt="" />` : "";
+  }
+
   static quickVariantSlots(character) {
     const configured = Array.isArray(character?.quickVariantIds) ? character.quickVariantIds.slice(0, 6) : [];
     while (configured.length < 6) configured.push(null);
@@ -3007,7 +3298,7 @@ class VisualNovelDirector {
         data-variant-id="${VisualNovelAPI.escapeHtml(slot.id)}"
         title="${VisualNovelAPI.escapeHtml(slot.name)}"
         aria-label="${VisualNovelAPI.escapeHtml(slot.name)}">
-          <img src="${VisualNovelAPI.escapeHtml(slot.image)}" alt="" />
+          ${this.variantSlotContent(slots.indexOf(slot), slot.image)}
         </button>`;
     }).join("")}</div>`;
   }
@@ -3030,6 +3321,23 @@ class VisualNovelDirector {
   static presetVariantControls(character) {
     if (!Array.isArray(character?.variants) || !character.variants.length) return "";
     return `<div class="fvn-preset-variant-controls">${this.variantOptions(character)}${this.transitionOptions(character)}</div>`;
+  }
+
+  static async setCharacterCoordinate(characterId, axis, percent) {
+    if (!game.user.isGM || !["x", "y"].includes(axis) || !Number.isFinite(percent)) return false;
+    const library = foundry.utils.deepClone(this.getLibrary());
+    const character = library.find((entry) => String(entry.id) === String(characterId));
+    if (!character) return false;
+    character[axis] = Math.min(100, Math.max(0, percent)) / 100;
+    await this.setLibrary(library);
+    const state = VisualNovelAPI.getState();
+    const portrait = state.portraits.find((entry) => String(entry.characterId ?? entry.id) === String(characterId));
+    if (portrait) {
+      portrait[axis] = character[axis];
+      await VisualNovelAPI.commitState(state);
+    }
+    await this.renderCharacters();
+    return true;
   }
 
   static async setCharacterVariant(characterId, variantId) {
@@ -3170,6 +3478,11 @@ class VisualNovelDirector {
   static updatePositionOutput(editor) {
     const x = Math.min(1, Math.max(0, Number(editor.elements.x.value) || 0));
     const y = Math.min(1, Math.max(0, Number(editor.elements.y.value) || 0));
+    for (const [axis, value] of [["x", x], ["y", y]]) {
+      editor.querySelectorAll(`[data-coordinate="${axis}"]`).forEach((input) => {
+        input.value = String(Math.round(value * 1000) / 10);
+      });
+    }
     editor.querySelector("[data-region='position-output']").textContent = `X ${Math.round(x * 100)}% · Y ${Math.round(y * 100)}%`;
   }
 
@@ -3200,7 +3513,7 @@ class VisualNovelDirector {
       panel.style.zIndex = pickerLayout.zIndex;
     };
 
-    const FilePickerClass = foundry?.applications?.apps?.FilePicker ?? globalThis.FilePicker;
+    const FilePickerClass = globalThis.FilePicker ?? foundry?.applications?.apps?.FilePicker;
     if (!FilePickerClass) {
       ui.notifications.error("Foundry Visual Novel: FilePicker API unavailable.");
       restoreDirector();
@@ -3377,20 +3690,17 @@ class VisualNovelOnboarding {
   static releaseNotes() {
     return {
       features: [
-        game.i18n.localize("FVN.ReleaseFeatureQuickVariants"),
-        game.i18n.localize("FVN.ReleaseFeatureTransitions"),
-        game.i18n.localize("FVN.ReleaseFeatureSpotlight"),
-        game.i18n.localize("FVN.ReleaseFeatureQuickToolbar"),
-        game.i18n.localize("FVN.ReleaseFeatureLightTheme"),
-        game.i18n.localize("FVN.ReleaseFeatureResponsive"),
-        game.i18n.localize("FVN.ReleaseFeatureVariantEditor")
+        game.i18n.localize("FVN.Release12Forge"),
+        game.i18n.localize("FVN.Release12Coordinates"),
+        game.i18n.localize("FVN.Release12Shortcuts"),
+        game.i18n.localize("FVN.Release12Names"),
+        game.i18n.localize("FVN.Release12Appearance"),
+        game.i18n.localize("FVN.Release12PresetSwitch")
       ],
       fixes: [
-        game.i18n.localize("FVN.ReleaseFixPersistence"),
-        game.i18n.localize("FVN.ReleaseFixContrast"),
-        game.i18n.localize("FVN.ReleaseFixQuickAccess"),
-        game.i18n.localize("FVN.ReleaseFixScenePreset"),
-        game.i18n.localize("FVN.ReleaseFixPolish")
+        game.i18n.localize("FVN.Release12Monk"),
+        game.i18n.localize("FVN.Release12News"),
+        game.i18n.localize("FVN.Release12Position")
       ]
     };
   }
@@ -3431,11 +3741,9 @@ class VisualNovelOnboarding {
     const disabled = game.settings.get(MODULE_ID, RELEASE_NOTICE_DISABLED_SETTING);
     const seen = game.settings.get(MODULE_ID, RELEASE_SEEN_SETTING);
     const firstRunSeen = Boolean(game.settings.get(MODULE_ID, FIRST_RUN_BOOTSTRAP_SETTING));
-    // First-run Welcome is world-specific and must appear once even when this
-    // browser has already seen Cast & Scene in another World. The user's
-    // release-notice preference only applies after this World has completed
-    // its own first-run Welcome.
-    if (!force && firstRunSeen && (disabled || seen === CURRENT_VERSION)) return;
+    // A dismissed version stays dismissed on this client. New versions may
+    // announce new notes; retain the legacy opt-out when no seen version exists.
+    if (!force && (seen === CURRENT_VERSION || (firstRunSeen && disabled && !seen))) return;
     const notes = this.releaseNotes();
     const content = `
       <div class="fvn-release-notes">
@@ -3444,11 +3752,14 @@ class VisualNovelOnboarding {
         <section><h3>${game.i18n.localize("FVN.Fixed")}</h3><ul>${notes.fixes.map((item) => `<li><i class="fa-solid fa-wrench"></i><span>${item}</span></li>`).join("")}</ul></section>
         <label class="fvn-release-notes__choice"><input type="checkbox" name="disableReleaseNotes" /> <span>${game.i18n.localize("FVN.DoNotShowReleaseNotes")}</span></label>
       </div>`;
+    const contentElement = document.createElement("div");
+    contentElement.innerHTML = content;
+    const preference = contentElement.querySelector('[name="disableReleaseNotes"]');
     let tutorialRequested = false;
     let tutorialLaunched = false;
     const confirmed = await foundry.applications.api.DialogV2.wait({
       window: { title: game.i18n.localize("FVN.WelcomeTitle") },
-      content,
+      content: contentElement,
       buttons: [
         {
           action: "tutorial",
@@ -3457,7 +3768,7 @@ class VisualNovelOnboarding {
           default: false,
           callback: async (_event, _button, dialog) => {
             tutorialRequested = true;
-            const disable = Boolean(dialog?.element?.querySelector?.('[name="disableReleaseNotes"]')?.checked);
+            const disable = Boolean(preference.checked);
             await game.settings.set(MODULE_ID, RELEASE_SEEN_SETTING, CURRENT_VERSION);
             await game.settings.set(MODULE_ID, FIRST_RUN_WELCOME_SEEN_SETTING, true);
             await game.settings.set(MODULE_ID, FIRST_RUN_BOOTSTRAP_SETTING, "complete");
@@ -3476,7 +3787,7 @@ class VisualNovelOnboarding {
           label: game.i18n.localize("FVN.Close"),
           default: true,
           callback: async (_event, _button, dialog) => {
-            const disable = Boolean(dialog?.element?.querySelector?.('[name="disableReleaseNotes"]')?.checked);
+            const disable = Boolean(preference.checked);
             await game.settings.set(MODULE_ID, RELEASE_SEEN_SETTING, CURRENT_VERSION);
             await game.settings.set(MODULE_ID, FIRST_RUN_WELCOME_SEEN_SETTING, true);
             await game.settings.set(MODULE_ID, FIRST_RUN_BOOTSTRAP_SETTING, "complete");
@@ -3488,6 +3799,11 @@ class VisualNovelOnboarding {
       rejectClose: false
     });
 
+    // wait resolves for buttons, the window X and Escape. Persist every path.
+    await game.settings.set(MODULE_ID, RELEASE_SEEN_SETTING, CURRENT_VERSION);
+    await game.settings.set(MODULE_ID, RELEASE_NOTICE_DISABLED_SETTING, Boolean(preference.checked));
+    await game.settings.set(MODULE_ID, FIRST_RUN_WELCOME_SEEN_SETTING, true);
+    await game.settings.set(MODULE_ID, FIRST_RUN_BOOTSTRAP_SETTING, "complete");
     await this.showCommunityCard();
 
     if (!tutorialLaunched && (tutorialRequested || confirmed === "tutorial")) {
@@ -3675,6 +3991,26 @@ class VisualNovelOnboarding {
 
 class VisualNovelAPI {
   static lastFocus = null;
+
+  static clearRemovedPresentationTargets(state) {
+    const ids = new Set(state.portraits.map((portrait) => String(portrait.id)));
+    const characterIds = new Set(state.portraits.map((portrait) => String(portrait.characterId ?? portrait.id)));
+    if (state.spotlightCharacterId && !characterIds.has(String(state.spotlightCharacterId))) state.spotlightCharacterId = null;
+    if (state.camera?.targetPortraitId && !ids.has(String(state.camera.targetPortraitId))) {
+      state.camera = foundry.utils.deepClone(DEFAULT_STAGE_STATE.camera);
+      this.lastFocus = null;
+    }
+  }
+
+  static applyPresetSwitch(state, tabId) {
+    if (game.settings.get(MODULE_ID, "presetSwitchMode") !== "replace" || !tabId) return;
+    const library = new Map(VisualNovelDirector.getLibrary().map((entry) => [String(entry.id), entry]));
+    state.portraits = state.portraits.filter((portrait) => {
+      const character = library.get(String(portrait.characterId ?? portrait.id));
+      return String(character?.tabId ?? portrait.tabId ?? "") === String(tabId);
+    });
+    this.clearRemovedPresentationTargets(state);
+  }
   static getState() {
     return VisualNovelStage.normalizeStageState(game.settings.get(MODULE_ID, STATE_SETTING));
   }
@@ -3721,6 +4057,7 @@ class VisualNovelAPI {
     });
 
     const state = this.getState();
+    this.applyPresetSwitch(state, portrait.tabId);
     const index = state.portraits.findIndex((entry) => String(entry.characterId ?? entry.id) === String(portrait.characterId ?? portrait.id));
     if (index >= 0) state.portraits[index] = portrait;
     else state.portraits.push(portrait);
@@ -3810,7 +4147,143 @@ class VisualNovelAPI {
         characterId: character.id
       });
     });
+    this.clearRemovedPresentationTargets(state);
     await this.commitState(state);
+  }
+
+  static getQuickAccessCharacters() {
+    const tabs = VisualNovelScenePalette.getAvailableTabs();
+    const tabId = tabs.some((tab) => tab.id === VisualNovelScenePalette.currentTabId)
+      ? VisualNovelScenePalette.currentTabId : tabs[0]?.id;
+    if (!tabId) return [];
+    return VisualNovelDirector.getLibrary().filter((entry) => entry.tabId === tabId);
+  }
+
+  static async toggleSlot(slot) {
+    if (!game.user.isGM || !Number.isInteger(slot) || slot < 1) return false;
+    const character = this.getQuickAccessCharacters()[slot - 1];
+    if (!character) return false;
+    if (VisualNovelDirector.getVisibleIds().has(String(character.id))) await this.hide(character.id);
+    else await this.show(character.id);
+    return true;
+  }
+
+  static nextCharacter() { return VisualNovelScenePalette.cycleCharacter(1); }
+  static previousCharacter() { return VisualNovelScenePalette.cycleCharacter(-1); }
+
+  static getQuickVariant(character, variantSlot) {
+    if (!Number.isInteger(variantSlot) || variantSlot < 1 || variantSlot > 6) return null;
+    const id = character?.quickVariantIds?.[variantSlot - 1];
+    if (id === "__main__") return { id: null, name: game.i18n.localize("FVN.MainImage"), image: character.image };
+    return id ? character.variants?.find((variant) => String(variant.id) === String(id)) ?? null : null;
+  }
+
+  static async selectQuickVariant(variantSlot, characterSlot = null) {
+    if (!game.user?.isGM) return false;
+    if (characterSlot !== null && (!Number.isInteger(characterSlot) || characterSlot < 1)) return false;
+    const character = characterSlot === null ? VisualNovelScenePalette.getSelectedCharacter() : this.getQuickAccessCharacters()[characterSlot - 1];
+    const variant = this.getQuickVariant(character, variantSlot);
+    if (!variant) return false;
+    await VisualNovelDirector.setCharacterVariant(character.id, variant.id);
+    return true;
+  }
+
+  static async controlCharacter(character, action) {
+    if (!game.user?.isGM || !character) return false;
+    const visible = VisualNovelDirector.getVisibleIds().has(String(character.id));
+    if (action === "toggle") {
+      if (visible) await this.hide(character.id); else await this.show(character.id);
+    } else if (action === "silhouette") await this.toggleSilhouette(character.id);
+    else if (action === "spotlight" && visible) await this.toggleSpotlight(character.id);
+    else if (action === "focus" && visible) await this.focusCharacter(character.id);
+    else return false;
+    return true;
+  }
+
+  static async controlSelected(action) {
+    if (!game.user?.isGM) return false;
+    return this.controlCharacter(VisualNovelScenePalette.getSelectedCharacter(), action);
+  }
+
+  static async controlSlot(slot, action) {
+    if (!game.user?.isGM || !Number.isInteger(slot) || slot < 1) return false;
+    return this.controlCharacter(this.getQuickAccessCharacters()[slot - 1], action);
+  }
+
+  static controlDefinitions() {
+    const definitions = [
+      { id: "previousCharacter", name: "Selected character: Previous", command: "CastAndScene.previousCharacter()" },
+      { id: "nextCharacter", name: "Selected character: Next", command: "CastAndScene.nextCharacter()" },
+      { id: "showQuickAccessCast", name: "Cast: Show all", command: "CastAndScene.showQuickAccessCast()" },
+      { id: "hideQuickAccessCast", name: "Cast: Hide all", command: "CastAndScene.hideAll()" }
+    ];
+    const actions = [["toggle", "Show / hide"], ["spotlight", "Spotlight on / off"], ["silhouette", "Silhouette / reveal"], ["focus", "Zoom on / off"]];
+    for (const [action, label] of actions) definitions.push({ id: `selected-${action}`, name: `Selected character: ${label}`, command: `CastAndScene.controlSelected("${action}")` });
+    for (let variant = 1; variant <= 6; variant++) definitions.push({ id: `selected-variant-${variant}`, name: `Selected character: Quick Variant ${variant}`, command: `CastAndScene.selectQuickVariant(${variant})` });
+    for (let slot = 1; slot <= 10; slot++) {
+      for (const [action, label] of actions) definitions.push({ id: action === "toggle" ? `toggleSlot${slot}` : `slot-${slot}-${action}`, name: `Slot ${String(slot).padStart(2, "0")}: ${label}`, command: `CastAndScene.controlSlot(${slot}, "${action}")`, slot });
+      for (let variant = 1; variant <= 6; variant++) definitions.push({ id: `slot-${slot}-variant-${variant}`, name: `Slot ${String(slot).padStart(2, "0")}: Quick Variant ${variant}`, command: `CastAndScene.selectQuickVariant(${variant}, ${slot})`, slot });
+    }
+    return definitions;
+  }
+
+  static runControl(id) {
+    if (!game.user?.isGM) return false;
+    if (id === "nextCharacter") return this.nextCharacter();
+    if (id === "previousCharacter") return this.previousCharacter();
+    if (id === "showQuickAccessCast") return this.showQuickAccessCast();
+    if (id === "hideQuickAccessCast") return this.hideAll();
+    let match = /^selected-variant-([1-6])$/.exec(id);
+    if (match) return this.selectQuickVariant(Number(match[1]));
+    match = /^selected-(toggle|spotlight|silhouette|focus)$/.exec(id);
+    if (match) return this.controlSelected(match[1]);
+    match = /^toggleSlot(\d+)$/.exec(id);
+    if (match) return this.toggleSlot(Number(match[1]));
+    match = /^slot-(\d+)-variant-([1-6])$/.exec(id);
+    if (match) return this.selectQuickVariant(Number(match[2]), Number(match[1]));
+    match = /^slot-(\d+)-(spotlight|silhouette|focus)$/.exec(id);
+    if (match) return this.controlSlot(Number(match[1]), match[2]);
+    return false;
+  }
+
+  static async showMacroInstaller() {
+    if (!game.user?.isGM) return false;
+    const choice = await foundry.applications.api.DialogV2.wait({
+      window: { title: "Cast & Scene — Control macros" },
+      content: "<p>Create ready-to-use Script macros in a dedicated folder. Existing Cast & Scene control macros are kept, including your edits.</p><p><strong>Basic:</strong> 14 macros for navigation, selected-character actions, six Quick Variants, and show/hide all.</p><p><strong>All slots:</strong> also add 100 direct controls for slots 1–10. Keyboard bindings remain separately configurable in Configure Controls.</p><p>Touch Portal must forward input to Foundry or use a macro integration; these macros do not create global hotkeys.</p>",
+      buttons: [
+        { action: "basic", label: "Create basic macros (14)", default: true },
+        { action: "all", label: "Create all macros (114)" },
+        { action: "cancel", label: "Cancel" }
+      ], rejectClose: false
+    });
+    if (choice !== "basic" && choice !== "all") return false;
+    return this.installControlMacros({ includeSlotMacros: choice === "all" });
+  }
+
+  static async installControlMacros({ includeSlotMacros = false } = {}) {
+    if (!game.user?.isGM) return false;
+    // Reuse only our tagged folder and macros, never match solely by display name.
+    let folder = game.folders.find((entry) => entry.type === "Macro" && entry.flags?.[MODULE_ID]?.controlMacros);
+    if (!folder) folder = await Folder.create({ name: "Cast & Scene Controls", type: "Macro", flags: { [MODULE_ID]: { controlMacros: true } } });
+    if (!folder) return false;
+    const definitions = this.controlDefinitions().filter((entry) => includeSlotMacros || !entry.slot);
+    const pending = definitions.filter((entry) => !game.macros.some((macro) => macro.flags?.[MODULE_ID]?.controlId === entry.id));
+    if (pending.length) await Macro.createDocuments(pending.map((entry) => ({
+      name: entry.name, type: "script", img: "icons/svg/mystery-man.svg", folder: folder.id,
+      command: `if (!game.user?.isGM || !game.modules.get("${MODULE_ID}")?.active || !globalThis.CastAndScene) return;\nawait ${entry.command};`,
+      flags: { [MODULE_ID]: { controlId: entry.id } }, ownership: { default: 0 }
+    })));
+    ui.notifications.info(`Cast & Scene: created ${pending.length} control macros; existing macros were preserved.`);
+    return { created: pending.length, skipped: definitions.length - pending.length };
+  }
+
+  static async showQuickAccessCast() {
+    if (!game.user.isGM) return false;
+    const characters = this.getQuickAccessCharacters();
+    if (!characters.length) return false;
+    await this.showAll(characters[0].tabId);
+    return true;
   }
 
   static async toggleNames(force = null) {
@@ -4184,6 +4657,63 @@ class VisualNovelDataMigrations {
 }
 
 Hooks.once("init", () => {
+  game.settings.register(MODULE_ID, "showTouchControls", {
+    name: "Quick Access Touch panel",
+    hint: "Show touch controls below the portraits. Tap a portrait to select it, then control visibility, Spotlight, silhouette, zoom and variants. Shortcuts and macros also work with the panel off. Saved for this browser.",
+    scope: "client", config: true, type: Boolean, default: false,
+    onChange: () => { if (game.user?.isGM) VisualNovelScenePalette.render(); }
+  });
+  for (const [key, name, hint, choices, defaultValue] of [
+    ["sceneDisplay", "Quick Access preset appearance", "Display presets as named tabs or squares. Map previews reuse linked Scene thumbnails; missing previews show a number. Hover for the preset name. Saved for this browser.", { tabs: "Named tabs", thumbnails: "Squares: map previews", squares: "Squares: numbers", letters: "Squares: letters" }, "tabs"],
+    ["variantDisplay", "Quick Variant appearance", "Display variant squares as mini portraits, numbers (1–6) or letters (A–F). Variant assignments stay the same. Saved for this browser.", { thumbnails: "Mini portraits", numbers: "Numbers (1–6)", letters: "Letters (A–F)" }, "thumbnails"]
+  ]) game.settings.register(MODULE_ID, key, {
+    name, hint, choices, scope: "client", config: true, type: String, default: defaultValue,
+    onChange: () => { if (game.user?.isGM) VisualNovelScenePalette.render(); }
+  });
+  game.settings.register(MODULE_ID, "presetSwitchMode", {
+    name: "Preset switching",
+    hint: "When showing a character from another preset, keep or replace the previous cast. Selecting a preset alone changes nothing. Activating a new Foundry Scene always resets the stage. Shared by this world.",
+    scope: "world", config: true, type: String, default: "keep",
+    choices: { keep: "Keep previous characters", replace: "Replace previous characters" }
+  });
+  for (const [key, name, hint, choices, defaultValue] of [
+    ["namePosition", "Character names: position", "Place names at the portrait base or above its visible upper edge. Transparent padding is ignored when the image permits pixel access. Shared by this world.", { base: "At the base", head: "Above the head" }, "base"],
+    ["nameBehavior", "Character names: zoom behavior", "Attached names move and scale with the portrait. Floating names follow its position during zoom, keep a readable size and stay inside the visible stage. Shared by this world.", { attached: "Attached", floating: "Floating — stay readable during zoom" }, "attached"],
+    ["nameStyle", "Character names: style", "Choose a framed label, minimal text without a box, or text with a dark outline. Shared by this world.", { framed: "Framed", minimal: "Minimal — no frame", outline: "Outlined text" }, "framed"],
+    ["nameSize", "Character names: text size", "Small keeps the previous text size (18 px). Medium is 24 px; Large is 32 px. Floating names keep this size during zoom. Shared by this world.", { small: "Small", medium: "Medium", large: "Large" }, "small"],
+    ["nameFont", "Character names: font", "Choose a standard font or a font loaded by Foundry, including your world's custom fonts. Add more fonts through Foundry's font configuration so they also load for players and OBS. Shared by this world.", VisualNovelStage.nameFontChoices(), "default"]
+  ]) game.settings.register(MODULE_ID, key, {
+    name, hint, choices, scope: "world", config: true, type: String, default: defaultValue,
+    onChange: () => { if (document.getElementById("fvn-stage")) VisualNovelStage.renderState(VisualNovelAPI.getState()); }
+  });
+  game.settings.registerMenu(MODULE_ID, "controlMacros", {
+    name: "Control macros", label: "Create control macros", icon: "fa-solid fa-keyboard",
+    hint: "Create ready-to-use navigation and character macros. The Touch panel can stay off; existing macros are preserved.", restricted: true,
+    type: class extends foundry.applications.api.DialogV2 {
+      constructor(options = {}) {
+        super({ ...options, window: { title: "Cast & Scene — Control macros" },
+          content: "<p>Create macros in a dedicated folder. Existing macros and custom edits are preserved.</p><p>Basic: 14 selected-character and navigation controls. All slots: 114 controls including direct slots 1–10.</p>",
+          buttons: [
+            { action: "basic", label: "Create basic macros (14)", default: true, callback: () => VisualNovelAPI.installControlMacros() },
+            { action: "all", label: "Create all macros (114)", callback: () => VisualNovelAPI.installControlMacros({ includeSlotMacros: true }) },
+            { action: "cancel", label: "Cancel" }
+          ]
+        });
+      }
+    }
+  });
+  for (const definition of VisualNovelAPI.controlDefinitions()) {
+    game.keybindings.register(MODULE_ID, definition.id, {
+      name: definition.name,
+      hint: "Uses the selected Quick Access preset. Foundry must receive keyboard input. No default key is assigned.",
+      editable: [], restricted: true, repeat: false,
+      onDown: () => {
+        if (!game.user?.isGM) return false;
+        Promise.resolve(VisualNovelAPI.runControl(definition.id)).catch((error) => console.error(`${MODULE_ID} | Control failed`, error));
+        return true;
+      }
+    });
+  }
   game.settings.register(MODULE_ID, LIBRARY_SETTING, {
     name: "FVN.LibrarySetting",
     scope: "world",
@@ -4257,6 +4787,7 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", async () => {
+  VisualNovelStage.refreshNameFontChoices();
   // First-run onboarding is deliberately independent from canvas/Scene lifecycle.
   // A brand-new Foundry World may have no active Scene at all.
   if (game.user.isGM) {
@@ -4300,6 +4831,19 @@ Hooks.once("ready", async () => {
 });
 
 Hooks.on("getSceneControlButtons", registerSceneControl);
+Hooks.on("renderSettingsConfig", (app, html) => {
+  VisualNovelStage.refreshNameFontChoices();
+  const element = html instanceof HTMLElement ? html : html?.[0] ?? app.element;
+  const select = element?.querySelector?.('[name="cast-and-scene.nameFont"]');
+  if (!select) return;
+  const selected = select.value || game.settings.get(MODULE_ID, "nameFont");
+  const choices = VisualNovelStage.nameFontChoices();
+  if (selected.startsWith("family:") && !choices[selected]) choices[selected] = `${selected.slice(7)} (unavailable — fallback font)`;
+  select.replaceChildren(...Object.entries(choices).map(([value, label]) => {
+    const option = document.createElement("option"); option.value = value; option.textContent = label; return option;
+  }));
+  select.value = selected;
+});
 Hooks.on("renderSidebarTab", () => {
   VisualNovelStage.refreshSafeAreaObservers();
   VisualNovelStage.scheduleSafeAreaUpdate();

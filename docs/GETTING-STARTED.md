@@ -337,15 +337,20 @@ Camera Focus uses normalized positioning and adapts independently to
 each client's viewport, but the apparent spacing between portraits can
 still vary.
 
-This is a known limitation of Cast & Scene 1.1.0 and does not affect
+This is a known limitation of Cast & Scene 1.2.0 and does not affect
 saved Character Pool or Scene Preset data.
 
 ## Community and Support
 
-Cast & Scene 1.1.0 is free to use.
+Cast & Scene 1.2.0 is free to use.
 
 If you would like to follow development, future modules and updates, you
 can join the Dungeon Maxter community on Patreon.
 
 [**Join Dungeon Maxter on
 Patreon**](https://www.patreon.com/cw/DungeonMaxter)
+
+
+## Controls and settings introduced in 1.2.0
+
+See [Controls and presentation settings](CONTROLS.md) for keyboard bindings, optional macro creation, Touch panel, exact coordinates, preset switching and name presentation.

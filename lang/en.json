@@ -180,7 +180,7 @@
     "WelcomeVersion": "Version {version} is ready.",
     "WhatsNew": "What's new",
     "Fixed": "Corrections and maintenance",
-    "DoNotShowReleaseNotes": "Do not show release notes again",
+    "DoNotShowReleaseNotes": "Do not show these release notes again",
     "StartTutorial": "Start tutorial",
     "ReleaseFeatureArchitecture": "Quick Variants let each Scene Preset expose up to six selected character images directly in Quick Access while the Character Pool keeps the complete variant library.",
     "ReleaseFeaturePolish": "Variant changes can now use Instant, Flip, Dissolve, Blur, or Flash transitions configured per Scene Preset character.",
@@ -238,5 +238,14 @@
   "FVN.ReleaseFixContrast": "Improved contrast for active controls, Reset Camera, empty Quick Variant slots, and other light-theme interface elements.",
   "FVN.ReleaseFixQuickAccess": "Quick Access received clearer Quick Variant slots, improved portrait-card rhythm, and neutral theme-aware scrollbars.",
   "FVN.ReleaseFixScenePreset": "Scene Preset Variant selection now combines active-image choice with up to six Quick Variant selections while keeping all Character Pool variants available.",
-  "FVN.ReleaseFixPolish": "Additional UI polish includes compact performance presentation, cleaner spacing, refined responsive behavior, and multiple small consistency fixes."
+  "FVN.ReleaseFixPolish": "Additional UI polish includes compact performance presentation, cleaner spacing, refined responsive behavior, and multiple small consistency fixes.",
+  "FVN.Release12Forge": "Forge image browsing uses the Forge-aware FilePicker, including Bazaar and Forge Assets.",
+  "FVN.Release12Coordinates": "Edit precise X/Y percentages in Scene Presets, or use sliders and numeric inputs in the character editor.",
+  "FVN.Release12Shortcuts": "Select characters with Next/Previous, toggle visibility, Spotlight, silhouette and zoom, or choose Quick Variants using configurable keybindings and ready-to-create macros.",
+  "FVN.Release12Monk": "The presentation remains visible with Monk's Common Display Hide UI enabled.",
+  "FVN.Release12News": "Release-note dismissal is saved when closing with a button, X, or Escape.",
+  "FVN.Release12Position": "Quick Access starts near the vertical center, respects saved positions, and keeps its launcher stationary when expanded.",
+  "FVN.Release12Names": "Customize character names with base or above-head placement, floating zoom behavior, framed/minimal/outlined styles, three sizes and Foundry/world fonts.",
+  "FVN.Release12Appearance": "Choose compact preset map previews, numbers or letters, and thumbnail/numeric/alphabetic Quick Variants. The optional Touch panel keeps standard Quick Access compact.",
+  "FVN.Release12PresetSwitch": "Choose whether showing a character from another preset keeps or replaces the previous cast. Activating a new Foundry Scene still clears the live stage."
 }
